@@ -1,0 +1,31 @@
+{
+  "name": "biohazard-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "deploy:github": "npm run build && node scripts/publish-pages.mjs",
+    "build:standalone": "vite build --mode standalone && node scripts/package-standalone.mjs",
+    "package:web": "npm run build:standalone && python3 scripts/package_browser.py",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test",
+    "assets:prepare": "python3 scripts/prepare_cs_assets.py",
+    "assets:validate": "node scripts/validate-assets.mjs",
+    "assets:test": "python3 -m unittest discover -s tests/assets -p 'test_*.py'"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "vite": "^7.1.12",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}
