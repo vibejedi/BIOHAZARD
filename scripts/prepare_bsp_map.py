@@ -113,18 +113,16 @@ class BSP:
             if low[0]-.5 < x < high[0]+.5 and low[2]-.5 < z < high[2]+.5 and y+.06 < high[1] and y+2.2 > low[1]: return False
         return True
 
-    def export(self, output):
+    def export(self, output, map_id='dust2'):
         glb = GLB()
         glb.doc['nodes'] = [{'name': self.path.stem, 'mesh': 0}]
-        glb.doc['extensionsUsed'] = ['KHR_materials_unlit']
         for key in ['skins', 'animations']: del glb.doc[key]
         materials = {}
         for i, texture in enumerate(self.textures):
             if texture is None or texture['name'].lower() in INVISIBLE: continue
             materials[i] = glb.material(texture['name'], texture['pixels'], texture['name'].startswith('{'))
-            glb.doc['materials'][-1]['extensions'] = {'KHR_materials_unlit': {}}
         geometry = defaultdict(lambda: {'positions': [], 'normals': [], 'uv': [], 'uv1': []})
-        atlas_size = 1024
+        atlas_size = 1024 if map_id == 'dust2' else 2048
         atlas = np.full((atlas_size, atlas_size, 3), 128, np.uint8)
         ax, ay, row = 2, 2, 0
         face_count = 0
@@ -178,10 +176,10 @@ class BSP:
             for accessor in attributes.values(): glb.doc['bufferViews'][glb.doc['accessors'][accessor]['bufferView']]['target'] = 34962
             primitives.append({'attributes': attributes, 'material': materials[texture]})
         glb.doc['meshes'] = [{'primitives': primitives}]
-        glb.save(output/'dust2.glb')
-        Image.fromarray(atlas).save(output/'dust2-lightmap.png')
-        print('Dust2:', face_count, 'faces,',len(primitives),'texture batches,',len(self.polygons),'walkable polygons')
-        return {'faces': face_count, 'materials': len(primitives), 'geometry': 'dust2.glb', 'lightmap': 'dust2-lightmap.png'}
+        glb.save(output/f'{map_id}.glb')
+        Image.fromarray(atlas).save(output/f'{map_id}-lightmap.png')
+        print(f'{map_id}:', face_count, 'faces,',len(primitives),'texture batches,',len(self.polygons),'walkable polygons', flush=True)
+        return {'faces': face_count, 'materials': len(primitives), 'geometry': f'{map_id}.glb', 'lightmap': f'{map_id}-lightmap.png'}
 
     def navigation(self, step=.5):
         samples = {}
@@ -223,35 +221,39 @@ class BSP:
         nodes, links = [nodes[i] for i in main], [[remap[j] for j in links[i] if j in remap] for i in main]
         print('Navigation:',len(nodes),'nodes;',len(components),'components; discarded',len(samples)-len(nodes),'isolated nodes')
         def nearest(point): return min(range(len(nodes)), key=lambda i: sum((a-b)**2 for a,b in zip(nodes[i], point)))
-        ct = next(e for e in self.entities if e.get('classname') == 'info_player_start')
+        ct = next((e for e in self.entities if e.get('classname') == 'info_player_start'), None)
+        if ct is None: ct = next(e for e in self.entities if e.get('classname') == 'info_player_deathmatch')
         ct_pos = web_position(np.array(list(map(float,ct['origin'].split()))))
         start = nodes[nearest(ct_pos)]
         original_spawns = [web_position(np.array(list(map(float, e['origin'].split())))) for e in self.entities if e.get('classname') in ['info_player_start','info_player_deathmatch']]
         spawn_ids = sorted(set(nearest(point) for point in original_spawns))
         # Include graph points in reachable midrange lanes, so waves arrive without a long empty wait.
         spawn_ids += [i for i,p in enumerate(nodes) if 12 < math.dist(p,start) < 27 and i % 43 == 0]
+        angle = float(ct['angles'].split()[1]) if 'angles' in ct else float(ct.get('angle', 0))
         return {'step': step, 'nodes': nodes, 'links': links, 'playerSpawn': start,
-                'playerYaw': math.radians(float(ct.get('angles','0 0 0').split()[1]))-math.pi/2,
+                'playerYaw': math.radians(angle)-math.pi/2,
                 'spawns': [nodes[i] for i in spawn_ids], 'polygons': self.polygons,
                 'planes': self.planes, 'clipnodes': self.clipnodes, 'headnode': self.models[0][10], 'brushes': self.brushes}
 
 
-def convert_map(root, output):
-    bsp = BSP(root/'cstrike/maps/de_dust2.bsp', root)
-    result = bsp.export(output)
+def convert_map(root, output, relative='cstrike/maps/de_dust2.bsp', map_id='dust2', name='DUST II'):
+    bsp = BSP(root/relative, root)
+    result = bsp.export(output, map_id)
     nav = bsp.navigation()
-    result.update(name='DUST II', code='de_dust2', collision='dust2.json', navigationNodes=len(nav['nodes']))
-    (output/'dust2.json').write_text(json.dumps(nav, separators=(',', ':')))
+    result.update(id=map_id, name=name, code=Path(relative).stem, collision=f'{map_id}.json', navigationNodes=len(nav['nodes']))
+    (output/f'{map_id}.json').write_text(json.dumps(nav, separators=(',', ':')))
     sky = {}
     (output/'sky').mkdir(exist_ok=True)
     all_files = {p.name.lower(): p for parent in [root/'valve/gfx/env',root/'cstrike/gfx/env'] for p in parent.glob('*') if p.is_file()}
+    sky_name = next((e.get('skyname', 'des') for e in bsp.entities if e.get('classname') == 'worldspawn'), 'des').lower()
     for suffix in ['rt','lf','up','dn','bk','ft']:
-        source = all_files.get('des'+suffix+'.tga')
+        source = all_files.get(sky_name+suffix+'.tga')
         if source:
-            Image.open(source).convert('RGB').save(output/'sky'/f'des{suffix}.png')
-            sky[suffix] = f'sky/des{suffix}.png'
+            filename = f'des{suffix}.png' if map_id == 'dust2' else f'{map_id}-{suffix}.png'
+            Image.open(source).convert('RGB').save(output/'sky'/filename)
+            sky[suffix] = f'sky/{filename}'
     result['sky'] = sky
-    print('Dust2 browser geometry:',(output/'dust2.glb').stat().st_size,'bytes')
+    print(f'{name} browser geometry:',(output/f'{map_id}.glb').stat().st_size,'bytes', flush=True)
     return result
 
 

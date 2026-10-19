@@ -15,6 +15,13 @@ if (!existsSync(status) || !JSON.parse(readFileSync(status, 'utf8')).available) 
 if (!existsSync(join(dist, 'local-game-assets/dust2.glb'))) {
   throw new Error('The Dust2 browser model is missing.');
 }
+const manifest = JSON.parse(readFileSync(join(dist, 'local-game-assets/manifest.json'), 'utf8'));
+for (const id of ['c1a0', 'c1a1', 'c1a2']) {
+  const world = manifest.campaignWorlds?.find(world => world.id === id);
+  if (!world || ![world.geometry, world.collision, world.lightmap].every(file => existsSync(join(dist, 'local-game-assets', file)))) {
+    throw new Error(`The Half-Life campaign map ${id} is missing. Prepare all game assets before publishing.`);
+  }
+}
 
 const ref = 'refs/heads/gh-pages';
 const remote = git('ls-remote', 'origin', ref);

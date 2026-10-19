@@ -8,6 +8,7 @@ import '@fontsource/ibm-plex-mono/latin-400.css';
 import '@fontsource/ibm-plex-mono/latin-500.css';
 import './style.css';
 import { BiohazardGame } from './game.js';
+import { COURSES } from './campaign.js';
 
 const icons = {
   arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
@@ -28,13 +29,13 @@ const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const rifle = '<svg viewBox="0 0 160 48" fill="currentColor" aria-hidden="true"><path d="M4 21h30v-7h13v4h45v-4h5v4h20v4h31v-3h5v10h-5v-3h-46v6H78l5 13H67l-7-13H45l-4 12H30l2-15H10l-6 8H0V21Zm42-9h9v7h-9v-7Zm49-7h4v13h-4V5Z"/></svg>';
 
 document.querySelector('#app').innerHTML = `
-  <div id="world" aria-label="3D quarantine yard"></div>
+  <div id="world" aria-label="Counter-Strike Dust II game view"></div>
   <div class="cinema-grain" aria-hidden="true"></div>
   <div class="menu-shade" aria-hidden="true"></div>
   <header class="site-header">
     <a class="brand" href="#" aria-label="BIOHAZARD home"><span class="brand-mark">☣︎</span><span>BIOHAZARD<span class="brand-sub">QUARANTINE PROTOCOL</span></span></a>
     <nav aria-label="Main navigation"><button class="nav-item active" id="operations">OPERATIONS <span>01</span></button><button class="nav-item" id="manual">FIELD MANUAL ${icon('arrow')}</button></nav>
-    <div class="header-status"><span class="status-dot"></span> LOCAL OPERATION <span class="build-label">BUILD 0.1</span></div>
+    <div class="header-status"><span class="status-dot"></span> PRACTICE TIME TRIAL <span class="build-label">BUILD 0.2</span></div>
   </header>
 
   <main id="menu" class="menu">
@@ -42,8 +43,8 @@ document.querySelector('#app').innerHTML = `
     <h1>DEAD CITY.<br>LIVE <span>AMMO.</span></h1>
     <p class="intro">The perimeter is gone. Your orders haven't changed.<br>Gear up. Hold your ground. Make every round count.</p>
     <div class="mission-card">
-      <div class="mission-top"><span class="tag">SURVIVAL</span><select id="map-select" aria-label="Map"><option value="ashen">ASHEN YARD</option><option value="dust2" disabled>DUST II</option></select></div>
-      <div class="mission-title"><span class="map-icon">${icon('pin')}</span><div><h2>ASHEN YARD</h2><p>Industrial district · Quarantine sector 07</p></div><span class="danger-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
+      <div class="mission-top"><span class="tag">SPEED SURVIVAL</span><select id="map-select" aria-label="Map" disabled><option value="dust2">CS · DUST II</option><option value="hl-campaign" disabled>HL · MINI CAMPAIGN</option></select></div>
+      <div class="mission-title"><span class="map-icon">${icon('pin')}</span><div><h2>DUST II</h2><p>Original CS 1.6 map · Zombie quarantine</p></div><span class="danger-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
       <div class="mission-meta"><span>${icon('skull')} 5 HOSTILE WAVES</span><span>${icon('shield')} SOLO OPERATION</span></div>
     </div>
     <div class="loadout-label"><span>01 / SELECT LOADOUT</span><span>+ USP SIDEARM</span></div>
@@ -53,31 +54,34 @@ document.querySelector('#app').innerHTML = `
     </div>
     <div class="difficulty-row"><label for="difficulty">THREAT LEVEL</label><div class="difficulty-select"><span class="status-dot"></span><select id="difficulty" aria-label="Threat level"><option value="recruit">RECRUIT</option><option value="operator" selected>OPERATOR</option><option value="veteran">VETERAN</option></select></div></div>
     <button class="deploy" id="deploy"><span>ENTER THE QUARANTINE</span>${icon('arrow')}</button>
-    <div class="deploy-note" id="asset-status"><span class="status-dot"></span> NO DOWNLOAD. NO BACKUP. JUST YOU.</div>
+    <div class="deploy-note" id="asset-status"><span class="status-dot"></span> LOADING COUNTER-STRIKE MAP + MODELS…</div>
+    <button class="records-link" id="records-open">PERSONAL SPEED RECORDS ${icon('arrow')}</button>
   </main>
 
-  <aside class="scene-label" aria-label="Map information"><span class="scene-cross">+</span><div><span class="scene-kicker">RECON FEED / 07</span><strong>ASHEN YARD</strong><span class="scene-coordinates">41°24′12.2″N &nbsp; 02°10′26.5″E</span></div><span class="live-label"><i></i> LIVE</span></aside>
+  <aside class="scene-label" aria-label="Map information"><span class="scene-cross">+</span><div><span class="scene-kicker">RECON FEED / D2</span><strong>DUST II</strong><span class="scene-coordinates">DE_DUST2 · COUNTER-STRIKE 1.6</span></div><span class="live-label"><i></i> LIVE</span></aside>
   <div class="scene-bottom"><span>THEY DON'T STOP.<br><b>NEITHER DO YOU.</b></span><span class="vertical-rule"></span><span>CS-INSPIRED GUNPLAY<br><b>ORIGINAL WEB SURVIVAL</b></span></div>
   <footer class="site-footer"><span>INDEPENDENT PROTOTYPE <i>/</i> INSPIRED BY THE CLASSICS</span><div><button id="sound" class="icon-button" aria-label="Mute sound" title="Toggle sound">${icon('sound')}</button><button id="settings" class="icon-button" aria-label="Settings" title="Settings">${icon('gear')}</button><button id="fullscreen" class="icon-button" aria-label="Enter fullscreen" title="Fullscreen">${icon('expand')}</button></div><span class="footer-note">STAY SHARP. STAY ALIVE.</span></footer>
 
   <section id="hud" class="hud" aria-label="Game status" hidden>
-    <div class="hud-top"><div class="radar-wrap"><canvas id="radar" width="160" height="160" aria-label="Tactical minimap"></canvas><span class="radar-label">ASHEN YARD <b>07</b></span></div><div class="wave-panel"><span>QUARANTINE PROTOCOL</span><strong>WAVE <b id="wave">01</b><em>/ 05</em></strong><small><i class="status-dot"></i> <span id="remaining">HOSTILES INBOUND</span></small></div><button id="pause" class="hud-pause icon-button" aria-label="Pause game">${icon('pause')}</button></div>
+    <div class="hud-top"><div class="radar-wrap"><canvas id="radar" width="160" height="160" aria-label="Tactical minimap"></canvas><span class="radar-label">DUST II <b>D2</b></span></div><div class="wave-panel"><span id="run-stage">DUST II · SURVIVAL</span><strong>WAVE <b id="wave">01</b><em id="wave-total">/ 05</em></strong><small><i class="status-dot"></i> <span id="remaining">HOSTILES INBOUND</span></small><div class="run-clock"><b id="run-time">0:00.00</b><span id="run-score">0 PTS</span><span id="run-headshots">0 HEADSHOTS</span></div><button id="flashlight-toggle" class="flashlight-toggle" aria-label="Turn flashlight off" aria-pressed="true">F · FLASHLIGHT ON</button></div><button id="pause" class="hud-pause icon-button" aria-label="Pause game">${icon('pause')}</button></div>
     <div class="compass"><span>W</span><i></i><span>NW</span><i></i><b id="heading">N</b><i></i><span>NE</span><i></i><span>E</span></div>
     <div id="killfeed" class="killfeed" aria-live="polite"></div>
     <div id="wave-banner" class="wave-banner"><span>STAY ALERT</span><strong>THEY'RE COMING.</strong></div>
-    <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b></div><div id="hitmarker" class="hitmarker">×</div>
+    <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i><b></b></div><div id="hitmarker" class="hitmarker">×</div><div id="hit-feedback" class="hit-feedback" aria-live="polite"></div>
     <div id="damage-vignette" class="damage-vignette"></div>
-    <div id="interaction" class="interaction" hidden><kbd>E</kbd><span>RESUPPLY <b>$500</b></span></div>
+    <div id="interaction" class="interaction" hidden><kbd>E</kbd><span>RESUPPLY <b>500 CR</b></span></div>
     <div id="reload-indicator" class="reload-indicator" hidden><span>RELOADING</span><i></i></div>
     <div id="notification" class="notification" role="status"></div>
-    <div class="hud-bottom"><div class="vitals"><div class="health-number">${icon('health')}<strong id="health">100</strong><span>HEALTH</span></div><div class="health-track"><i id="health-bar"></i></div><div class="stamina-track"><i id="stamina-bar"></i></div><div class="hud-cash"><span id="cash">$0</span><span id="kills">0 KILLS</span></div></div><div class="hud-controls"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>R</kbd> RELOAD</span><span><kbd>1 / 2</kbd> SWITCH</span></div><div class="ammo-panel"><div class="weapon-label" id="weapon-name">M4 CARBINE</div><div class="ammo-numbers"><strong id="ammo">30</strong><span>/</span><b id="reserve">180</b></div><div class="caliber" id="caliber">5.56 × 45 MM</div></div></div>
+    <div class="hud-bottom"><div class="vitals"><div class="health-number">${icon('health')}<strong id="health">100</strong><span>HEALTH</span></div><div class="health-track"><i id="health-bar"></i></div><div class="stamina-track"><i id="stamina-bar"></i></div><div class="hud-cash"><span id="cash">0 CR</span><span id="kills">0 KILLS</span></div></div><div class="hud-controls"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>R</kbd> RELOAD</span><span><kbd>1 / 2</kbd> SWITCH</span></div><div class="ammo-panel"><div class="weapon-label" id="weapon-name">M4 CARBINE</div><div class="ammo-numbers"><strong id="ammo">30</strong><span>/</span><b id="reserve">180</b></div><div class="caliber" id="caliber">5.56 × 45 MM</div></div></div>
     <div class="touch-controls"><div id="joystick" class="joystick"><i></i></div><div class="touch-actions"><button id="touch-reload" aria-label="Reload">R</button><button id="touch-fire" aria-label="Fire">${icon('target')}</button><button id="touch-switch" aria-label="Switch weapon">1/2</button><button id="touch-supply" aria-label="Resupply">E</button></div></div>
   </section>
 
-  <section id="pause-screen" class="overlay-screen" hidden><div class="overlay-card"><span class="eyebrow">OPERATION ON HOLD</span><h2>TAKE A<br><span>BREATHER.</span></h2><p>The yard will wait. Your next shot matters.</p><button class="deploy" id="resume">BACK TO THE FIGHT ${icon('arrow')}</button><button class="secondary-button" id="restart">RESTART OPERATION</button><button class="text-button" id="quit">RETURN TO BASE</button></div></section>
-  <section id="result-screen" class="overlay-screen" hidden><div class="overlay-card"><span class="eyebrow" id="result-kicker">SIGNAL LOST</span><h2 id="result-title">OVERRUN.</h2><p id="result-description">You held the line. Until you couldn't.</p><div class="result-stats"><div><strong id="result-wave">01</strong><span>WAVE REACHED</span></div><div><strong id="result-kills">0</strong><span>HOSTILES DOWN</span></div><div><strong id="result-time">0:00</strong><span>TIME SURVIVED</span></div></div><p id="best-score" class="best-score"></p><button class="deploy" id="retry">ONE MORE ROUND ${icon('arrow')}</button><button class="text-button" id="result-quit">RETURN TO BASE</button></div></section>
+  <section id="pause-screen" class="overlay-screen" hidden><div class="overlay-card"><span class="eyebrow">OPERATION ON HOLD</span><h2>TAKE A<br><span>BREATHER.</span></h2><p>The run timer keeps going while paused. Your next shot matters.</p><button class="deploy" id="resume">BACK TO THE FIGHT ${icon('arrow')}</button><button class="secondary-button" id="restart">RESTART OPERATION</button><button class="text-button" id="quit">RETURN TO BASE</button></div></section>
+  <section id="result-screen" class="overlay-screen" hidden><div class="overlay-card"><span class="eyebrow" id="result-kicker">SIGNAL LOST</span><h2 id="result-title">OVERRUN.</h2><p id="result-description">You held the line. Until you couldn't.</p><div class="result-stats"><div><strong id="result-wave">01</strong><span>WAVE REACHED</span></div><div><strong id="result-kills">0</strong><span>HOSTILES DOWN</span></div><div><strong id="result-time">0:00.00</strong><span>RUN TIME</span></div><div><strong id="result-score">0</strong><span>POINTS</span></div><div><strong id="result-headshots">0</strong><span>HEADSHOTS</span></div><div><strong id="result-rank">—</strong><span>PERSONAL RANK</span></div></div><p id="result-record-note" class="record-note"></p><p id="best-score" class="best-score"></p><button class="deploy" id="retry">ONE MORE ROUND ${icon('arrow')}</button><button class="text-button" id="result-quit">RETURN TO BASE</button></div></section>
 
-  <dialog id="manual-dialog"><button class="close-dialog icon-button" aria-label="Close field manual">${icon('cross')}</button><span class="eyebrow">KNOW YOUR OPERATION</span><h2>FIELD MANUAL<span>.</span></h2><p>Survive five waves. Keep moving, aim for the head, and reload before the next wave hits.</p><div class="manual-grid"><div><kbd>W A S D</kbd><span>Move</span></div><div><kbd>MOUSE</kbd><span>Look around</span></div><div><kbd>LEFT CLICK</kbd><span>Fire weapon</span></div><div><kbd>RIGHT CLICK</kbd><span>Aim down sights</span></div><div><kbd>SHIFT</kbd><span>Sprint</span></div><div><kbd>SPACE</kbd><span>Jump</span></div><div><kbd>R</kbd><span>Reload</span></div><div><kbd>1 / 2</kbd><span>Rifle / pistol</span></div><div><kbd>E</kbd><span>Resupply near the green crate</span></div><div><kbd>ESC / P</kbd><span>Pause</span></div></div><div class="manual-tip">${icon('bolt')} Earn $100 per kill, or $150 for a headshot. Spend $500 at the field supply crate to refill ammunition and restore health.</div><p class="small-print">On touchscreens: use the left stick to move, drag the right side to look, and use the action buttons. This original web prototype is inspired by classic tactical shooters. It does not contain Counter-Strike game code or assets.</p></dialog>
+  <dialog id="records-dialog"><button class="close-dialog icon-button" aria-label="Close personal records">${icon('cross')}</button><span class="eyebrow"><span id="records-course">DUST II</span> / <span id="records-difficulty">OPERATOR</span></span><h2>SPEED RECORDS<span>.</span></h2><p>Clear every wave in your selected operation. Fastest finish wins the top spot; points break a time tie. Pauses count toward your time.</p><div class="records-table-wrap"><table class="records-table"><thead><tr><th>RANK</th><th>TIME</th><th>POINTS</th><th>HEADSHOTS</th></tr></thead><tbody id="records-body"></tbody></table></div><p id="records-empty">No completed runs yet. Complete your operation to set your first time.</p><p class="small-print">Personal practice records saved on this device, separated by difficulty. Points and supply credits have no cash value. Online prize competitions and payouts are not active.</p></dialog>
+
+  <dialog id="manual-dialog"><button class="close-dialog icon-button" aria-label="Close field manual">${icon('cross')}</button><span class="eyebrow">KNOW YOUR OPERATION</span><h2>FIELD MANUAL<span>.</span></h2><p>Survive five waves. Keep moving, aim for the head, and reload before the next wave hits.</p><div class="manual-grid"><div><kbd>W A S D</kbd><span>Move</span></div><div><kbd>MOUSE</kbd><span>Look around</span></div><div><kbd>LEFT CLICK</kbd><span>Fire weapon</span></div><div><kbd>RIGHT CLICK</kbd><span>Aim down sights</span></div><div><kbd>SHIFT</kbd><span>Sprint</span></div><div><kbd>SPACE</kbd><span>Jump</span></div><div><kbd>F</kbd><span>Toggle flashlight</span></div><div><kbd>R</kbd><span>Reload</span></div><div><kbd>1 / 2</kbd><span>Rifle / pistol</span></div><div><kbd>E</kbd><span>Resupply near the green crate</span></div><div><kbd>ESC / P</kbd><span>Pause</span></div></div><div class="manual-tip">${icon('bolt')} Earn $100 per kill, or $150 for a headshot. Spend $500 at the field supply crate to refill ammunition and restore health.</div><p class="small-print">On touchscreens: use the left stick to move, drag the right side to look, and use the action buttons. This original web prototype is inspired by classic tactical shooters. It does not contain Counter-Strike game code or assets.</p></dialog>
   <dialog id="settings-dialog"><button class="close-dialog icon-button" aria-label="Close settings">${icon('cross')}</button><span class="eyebrow">OPERATOR PREFERENCES</span><h2>SETTINGS<span>.</span></h2><label class="setting-row" for="sensitivity"><span>Mouse sensitivity</span><output id="sensitivity-value">1.0</output></label><input id="sensitivity" type="range" min="0.3" max="2.5" step="0.1" value="1"/><label class="setting-row" for="quality"><span>Render quality</span><select id="quality"><option value="high">HIGH</option><option value="low">PERFORMANCE</option></select></label><p class="small-print">Preferences are saved on this device. Performance mode reduces shadow quality and render resolution.</p></dialog>
 `;
 
@@ -117,7 +121,7 @@ if (game) {
   document.querySelector('#result-quit').addEventListener('click', () => game.home());
   document.querySelector('.brand').addEventListener('click', e => { e.preventDefault(); game.home(); });
   document.querySelector('#operations').addEventListener('click', () => { if (game.state !== 'home') game.home(); document.querySelector('#deploy').focus(); });
-  for (const [button, dialog] of [['manual', 'manual-dialog'], ['settings', 'settings-dialog']]) document.querySelector(`#${button}`).addEventListener('click', () => document.querySelector(`#${dialog}`).showModal());
+  for (const [button, dialog] of [['manual', 'manual-dialog'], ['settings', 'settings-dialog'], ['records-open', 'records-dialog']]) document.querySelector(`#${button}`).addEventListener('click', () => { if (button === 'records-open') game.renderRecords(); document.querySelector(`#${dialog}`).showModal(); });
   document.querySelectorAll('dialog').forEach(dialog => {
     dialog.querySelector('.close-dialog').addEventListener('click', () => dialog.close());
     dialog.addEventListener('click', e => { if (e.target === dialog) { const rect = dialog.getBoundingClientRect(); if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) dialog.close(); } });
@@ -135,23 +139,25 @@ if (game) {
   const quality = document.querySelector('#quality'); quality.value = read('bh-quality', 'high');
   const updateQuality = () => { game.setQuality(quality.value); save('bh-quality', quality.value); };
   quality.addEventListener('change', updateQuality); updateQuality();
-  document.querySelector('#map-select').addEventListener('change', event => game.selectMap(event.target.value));
+  document.querySelector('#map-select').addEventListener('change', event => game.selectCourse(event.target.value));
   const assetStatus = document.querySelector('#asset-status'), deployButton = document.querySelector('#deploy');
   deployButton.disabled = true; game.assetsStatus = 'loading';
   game.loadClassicAssets().then(assets => {
-    game.assetsStatus = assets ? 'ready' : 'absent';
-    if (assets) {
+    game.assetsStatus = assets && game.world.id ? 'ready' : 'absent';
+    if (assets && game.world.id) {
       assetStatus.innerHTML = '<span class="status-dot"></span> CS WEAPONS + HALF-LIFE ZOMBIES · WEB EDITION';
-      document.querySelector('#map-select option[value="dust2"]').disabled = !game.worlds.dust2;
-      document.querySelector('#map-select').value = game.world.id;
-      document.querySelector('#manual-dialog .small-print').textContent = 'On touchscreens: use the left stick to move, drag the right side to look, and use the action buttons. This browser survival game uses the original Dust II map, CS weapon models, and Half-Life zombie media with custom zombie-survival rules. Original Counter-Strike multiplayer and native game code are not included.';
-    }
+      for (const option of document.querySelectorAll('#map-select option')) option.disabled = !COURSES[option.value].stages.every(stage => game.worlds[stage.map]);
+      document.querySelector('#map-select').value = game.courseId;
+      document.querySelector('#map-select').disabled = false;
+      document.querySelector('#manual-dialog .manual-tip').textContent = 'Aim at the animated head for a one-shot kill: +250 kill points. Body kills award +100 and take 3 AK shots or 4 M4 / USP shots. Hits add +25 headshot / +5 body points. Supply credits buy health and ammunition; finish all waves as fast as you can. Dust II has 5 waves; the Half-Life campaign has 3 chapters with 3 waves each. Press F or tap the flashlight button in the HUD. Runners join wave 3 onward; leaping headcrabs join from wave 2 and take two body hits.';
+      document.querySelector('#manual-dialog .small-print').textContent = 'On touchscreens: use the left stick to move, drag the right side to look, and use the action buttons. This browser survival game uses original Counter-Strike and Half-Life maps, CS weapons, and Half-Life zombies. Black Mesa Lockdown is a custom wave campaign; original Half-Life story scripts, puzzles, and moving machinery are not included. Original Counter-Strike multiplayer and native game code are not included.';
+    } else { assetStatus.textContent = 'COUNTER-STRIKE ASSETS MISSING · GAME UNAVAILABLE'; }
   }).catch(error => {
     game.assetsStatus = 'error';
-    assetStatus.textContent = 'LOCAL ASSETS UNAVAILABLE · ORIGINAL MODELS ACTIVE';
+    assetStatus.textContent = 'COUNTER-STRIKE ASSETS COULD NOT LOAD · RELOAD TO RETRY';
     assetStatus.title = error.message;
     console.warn('Classic asset loading failed:', error);
-  }).finally(() => { deployButton.disabled = false; });
+  }).finally(() => { deployButton.disabled = game.assetsStatus !== 'ready'; });
   // Opt-in deterministic controls for browser integration tests; absent in normal play.
   if (new URLSearchParams(location.search).has('test')) window.__biohazard = game;
 }

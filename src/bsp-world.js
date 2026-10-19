@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MapCollision, NavigationGraph } from './bsp-navigation.js';
 import { mediaURL, mediaJSON } from './media.js';
 
-export async function loadDust2World(description) {
+export async function loadBspWorld(description) {
   const [model, data, lightmap] = await Promise.all([
     new GLTFLoader().loadAsync(mediaURL(description.geometry)),
     mediaJSON(description.collision),
@@ -12,12 +12,13 @@ export async function loadDust2World(description) {
   // BSP light samples describe illumination, not sRGB surface colors.
   lightmap.flipY = false; lightmap.channel = 1; lightmap.colorSpace = THREE.NoColorSpace;
   const scene = new THREE.Scene(), walls = [], collision = new MapCollision(data), navigation = new NavigationGraph(data);
-  scene.background = new THREE.Color(0xc4c4a6); scene.fog = new THREE.FogExp2(0xc9c6ac, 0.001);
-  scene.add(new THREE.HemisphereLight(0xffedd2, 0x786a51, 2.2));
-  const light = new THREE.DirectionalLight(0xffe4b8, 1.8); light.position.set(-20, 60, 20); scene.add(light);
+  scene.background = new THREE.Color(0x06090e); scene.fog = new THREE.FogExp2(0x080c12, 0.009);
+  scene.add(new THREE.HemisphereLight(0x9aabc5, 0x17201a, 0.14));
+  const light = new THREE.DirectionalLight(0x8299bd, 0.12); light.position.set(-20, 60, 20); scene.add(light);
   model.scene.traverse(object => {
     if (!object.isMesh) return;
-    object.material.lightMap = lightmap; object.material.lightMapIntensity = 6.4; object.material.needsUpdate = true;
+    object.material.lightMap = lightmap; object.material.lightMapIntensity = 1.1; object.material.needsUpdate = true;
+    object.receiveShadow = true; object.castShadow = true;
     object.material.map.anisotropy = 4;
     walls.push(object);
   });
@@ -25,6 +26,7 @@ export async function loadDust2World(description) {
   if (Object.keys(description.sky || {}).length === 6) {
     scene.background = await new THREE.CubeTextureLoader().loadAsync(['rt', 'lf', 'up', 'dn', 'bk', 'ft'].map(face => mediaURL(description.sky[face])));
     scene.background.colorSpace = THREE.SRGBColorSpace;
+    scene.backgroundIntensity = 0.12;
   }
   const playerSpawn = new THREE.Vector3(...data.playerSpawn);
   const supplyCandidates = data.nodes.filter(p => Math.hypot(p[0] - playerSpawn.x, p[2] - playerSpawn.z) > 2.3 && Math.hypot(p[0] - playerSpawn.x, p[2] - playerSpawn.z) < 3.3 && Math.abs(p[1] - playerSpawn.y) < 0.5);
@@ -36,7 +38,7 @@ export async function loadDust2World(description) {
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: true, transparent: true, opacity: 0.9 })); label.position.copy(supplies); label.position.y += 1.3; label.scale.set(1.5, 0.3, 1); label.visible = false; scene.add(label);
   const world = {
-    id: 'dust2', name: 'DUST II', code: 'DE_DUST2', eyeHeight: 2,
+    id: description.id || 'dust2', name: description.name, code: description.code.toUpperCase(), eyeHeight: 2,
     scene, collision, navigation, walls, dust: [], obstacles: [], supplies, playerSpawn, playerYaw: data.playerYaw,
     spawns: data.spawns.map(p => new THREE.Vector3(...p)),
     move: (position, dx, dz, ground) => collision.move(position, dx, dz, ground),

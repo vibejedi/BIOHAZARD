@@ -147,6 +147,26 @@ class Studio:
     def i(self, offset): return self.unpack('i', offset)[0]
     def string(self, offset, size): return self.data[offset:offset+size].split(b'\0')[0].decode('latin1')
 
+    def hitboxes(self):
+        result = []
+        for index in range(self.i(156)):
+            bone, group, *bounds = self.unpack('ii6f', self.i(160) + index * 32)
+            if not 0 <= bone < len(self.bones):
+                raise ValueError('Invalid studio hitbox bone')
+            a, b = web_position(np.array(bounds[:3])), web_position(np.array(bounds[3:]))
+            result.append({'bone': bone, 'group': group, 'min': np.minimum(a, b).tolist(), 'max': np.maximum(a, b).tolist()})
+        return result
+
+    def attachments(self):
+        result = []
+        for index in range(self.i(212)):
+            offset = self.i(216) + index * 88
+            bone = self.i(offset + 36)
+            if not 0 <= bone < len(self.bones):
+                raise ValueError('Invalid studio attachment bone')
+            result.append({'bone': bone, 'position': web_position(np.array(self.unpack('3f', offset + 40))).tolist()})
+        return result
+
     def convert(self, output, wanted):
         glb = GLB()
         # GoldSrc is Z-up; the web world is Y-up. 32 source units = 1 meter.
@@ -257,6 +277,7 @@ class Studio:
         bounds = np.array(bounds)
         return {'file': output.name, 'source': str(self.path.name), 'sha256': sha256(self.data).hexdigest(),
                 'bones': len(self.bones), 'materials': len(sizes), 'primitives': len(primitives), 'animations': sequences,
+                'hitboxes': self.hitboxes(), 'attachments': self.attachments(),
                 'bounds': [bounds.min(axis=0).tolist(), bounds.max(axis=0).tolist()], 'bytes': output.stat().st_size}
 
 
@@ -279,6 +300,7 @@ def prepare(root, output):
         'usp': 'cstrike/sound/weapons/usp_unsil-1.wav', 'reload': 'cstrike/sound/weapons/m4a1_clipin.wav',
         'zombie1': 'valve/sound/zombie/zo_idle1.wav', 'zombie2': 'valve/sound/zombie/zo_idle2.wav',
         'zombieAttack': 'valve/sound/zombie/zo_attack1.wav', 'hurt': 'valve/sound/player/pl_pain2.wav',
+        'crabIdle': 'valve/sound/headcrab/hc_idle1.wav', 'crabAttack': 'valve/sound/headcrab/hc_attack1.wav',
     }
     (output/'sounds').mkdir(exist_ok=True)
     for name, relative in sound_paths.items():
@@ -298,6 +320,8 @@ def prepare(root, output):
     report['source_files'] = {name: len([p for p in (root/name).rglob('*') if p.is_file()]) for name in ['cstrike', 'valve']}
     from prepare_bsp_map import convert_map
     report['world'] = convert_map(root, output)
+    report['campaignWorlds'] = [convert_map(root, output, f'valve/maps/{map_id}.bsp', map_id, name) for map_id, name in [
+        ('c1a0', 'ANOMALOUS MATERIALS'), ('c1a1', 'UNFORESEEN CONSEQUENCES'), ('c1a2', 'OFFICE COMPLEX')]]
     (output/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     return report
 

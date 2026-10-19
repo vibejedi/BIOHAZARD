@@ -8,13 +8,13 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 // Only prepared media can be served. Never expose the installer or native code.
 function localGameAssets(standalone = false) {
   const root = fileURLToPath(new URL('./game-assets/ready/', import.meta.url));
-  const allowed = /^(manifest\.json|(?:zombie|headcrab|m4|ak|usp|dust2)\.glb|dust2\.json|dust2-lightmap\.png|sky\/des(?:rt|lf|up|dn|bk|ft)\.png|sounds\/(?:m4|ak|usp|reload|zombie1|zombie2|zombieAttack|hurt)\.wav)$/;
+  const allowed = /^(manifest\.json|(?:zombie|headcrab|m4|ak|usp|dust2|c1a0|c1a1|c1a2)\.glb|(?:dust2|c1a0|c1a1|c1a2)\.json|(?:dust2|c1a0|c1a1|c1a2)-lightmap\.png|sky\/(?:des|(?:c1a0|c1a1|c1a2)-)(?:rt|lf|up|dn|bk|ft)\.png|sounds\/(?:m4|ak|usp|reload|zombie1|zombie2|zombieAttack|hurt|crabIdle|crabAttack)\.wav)$/;
   const mime = name => name.endsWith('.glb') ? 'model/gltf-binary' : name.endsWith('.wav') ? 'audio/wav' : name.endsWith('.png') ? 'image/png' : 'application/json';
   const prepared = async () => {
     try {
       const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'));
       const names = ['manifest.json', ...Object.values(manifest.models).map(model => model.file), ...Object.values(manifest.sounds)];
-      if (manifest.world) names.push(manifest.world.geometry, manifest.world.collision, manifest.world.lightmap, ...Object.values(manifest.world.sky));
+      for (const world of [manifest.world, ...(manifest.campaignWorlds || [])].filter(Boolean)) names.push(world.geometry, world.collision, world.lightmap, ...Object.values(world.sky));
       const result = { 'status.json': Buffer.from(JSON.stringify({ available: true })) };
       for (const name of new Set(names)) {
         if (!allowed.test(name)) throw new Error(`Unexpected prepared asset: ${name}`);
@@ -31,7 +31,7 @@ function localGameAssets(standalone = false) {
     const name = req.url.split('?')[0].slice('/local-game-assets/'.length);
     if (name === 'status' || name === 'status.json') {
       let available = false;
-      try { const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8')); available = manifest.format === 1; } catch { /* The original prototype also works without local data. */ }
+      try { const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8')); available = manifest.format === 1; } catch { /* Missing data keeps deployment disabled. */ }
       res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store');
       return res.end(JSON.stringify({ available }));
     }

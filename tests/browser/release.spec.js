@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { resolve, sep, extname } from 'node:path';
+import { placeTarget } from './scenario.js';
 
 let server, address, html;
 test.beforeAll(async () => {
@@ -59,21 +60,7 @@ test('standalone Dust2 game loads with no asset server and supports movement, co
   }, start)).toBeGreaterThan(0.4);
   await page.keyboard.up('KeyW');
   expect(await page.evaluate(() => { const g = window.__biohazard; return g.world.collision.canStand(g.camera.position.x, g.groundY + 0.04, g.camera.position.z); })).toBe(true);
-  const target = await page.evaluate(() => {
-    const g = window.__biohazard; g.nextWaveTimer = 999; g.clearEntities();
-    const camera = g.camera.position;
-    const candidates = g.world.navigation.nodes.filter(p => Math.hypot(p[0] - camera.x, p[2] - camera.z) > 3 && Math.hypot(p[0] - camera.x, p[2] - camera.z) < 7 && Math.abs(p[1] - g.groundY) < 0.6);
-    for (const point of candidates) {
-      const aim = camera.clone().set(point[0], point[1] + 1.25, point[2]);
-      g.raycaster.ray.origin.copy(camera); g.raycaster.ray.direction.copy(aim).sub(camera).normalize(); g.raycaster.far = aim.distanceTo(camera) - 0.5;
-      if (g.raycaster.intersectObjects(g.world.walls, false).length) continue;
-      const e = g.spawnEnemy(); e.group.position.set(...point); e.groundY = point[1]; e.speed = 0; e.health = 1;
-      const dx = aim.x - camera.x, dy = aim.y - camera.y, dz = aim.z - camera.z;
-      g.yaw = Math.atan2(-dx, -dz); g.pitch = Math.atan2(dy, Math.hypot(dx, dz)); g.look(0, 0); g.scene.updateMatrixWorld(true);
-      return point;
-    }
-    return null;
-  });
+  const target = await page.evaluate(placeTarget, { part: 'head' });
   expect(target).not.toBeNull();
   await page.screenshot({ path: 'test-results/dust2-browser-game.png' });
   await page.mouse.down(); await page.mouse.up();

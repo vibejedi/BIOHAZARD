@@ -8,7 +8,7 @@ test('local CS models animate, share resources safely, and decoded original audi
   const status = await request.get('/local-game-assets/status');
   test.skip(!(await status.json()).available, 'Local user-supplied game data has not been prepared.');
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/?test=1&map=ashen');
+  await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
   await expect(page.locator('#asset-status')).toContainText('HALF-LIFE ZOMBIES');
   await page.locator('#deploy').click();
@@ -28,7 +28,7 @@ test('local CS models animate, share resources safely, and decoded original audi
   }, before.rotation)).toBe(true);
   await page.evaluate(() => { const g = window.__biohazard; g.kill(g.enemies[0], false); g.corpses[0].time = 8; g.updateEffects(0.1); });
   expect(await page.evaluate(() => ({ survivors: window.__biohazard.enemies.length, classicWeapon: window.__biohazard.weapons.m4.classic }))).toEqual({ survivors: 1, classicWeapon: true });
-  await expect.poll(() => page.evaluate(() => Object.keys(window.__biohazard.audio.samples).length)).toBe(8);
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__biohazard.audio.samples).length)).toBe(10);
   await page.screenshot({ path: 'test-results/classic-assets.png' });
   expect(errors).toEqual([]);
 });
@@ -86,13 +86,14 @@ test('the installer, native libraries, and traversal paths are not served', asyn
   expect(unknown.status()).toBe(404);
 });
 
-test('the independent game still runs when no local CS data is available', async ({ page }) => {
+test('missing CS data blocks play and never falls back to a non-CS map', async ({ page }) => {
   await page.route('**/local-game-assets/status.json', route => route.fulfill({ json: { available: false } }));
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'absent');
-  await page.locator('#deploy').click();
-  await expect(page.locator('#hud')).toBeVisible();
+  await expect(page.locator('#deploy')).toBeDisabled();
+  await expect(page.locator('#asset-status')).toContainText('COUNTER-STRIKE ASSETS MISSING');
   expect(await page.evaluate(() => !!window.__biohazard.classicAssets)).toBe(false);
-  await page.keyboard.press('Digit2');
-  await expect(page.locator('#weapon-name')).toHaveText('USP SIDEARM');
+  expect(await page.evaluate(() => Object.keys(window.__biohazard.worlds))).toEqual([]);
+  await expect(page.locator('#map-select option')).toHaveCount(2);
+  await expect(page.locator('body')).not.toContainText('ASHEN');
 });

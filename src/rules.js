@@ -6,9 +6,19 @@ export const DIFFICULTIES = {
 
 export const WEAPONS = {
   m4: { name: 'M4 CARBINE', short: 'M4', caliber: '5.56 × 45 MM', capacity: 30, reserve: 180, damage: 29, interval: 0.105, reload: 2.1, recoil: 0.017, automatic: true },
-  ak: { name: 'AK RIFLE', short: 'AK', caliber: '7.62 × 39 MM', capacity: 30, reserve: 150, damage: 40, interval: 0.145, reload: 2.5, recoil: 0.027, automatic: true },
-  usp: { name: 'USP SIDEARM', short: 'USP', caliber: '.45 ACP', capacity: 12, reserve: 96, damage: 35, interval: 0.28, reload: 1.5, recoil: 0.023, automatic: false },
+  ak: { name: 'AK RIFLE', short: 'AK', caliber: '7.62 × 39 MM', capacity: 30, reserve: 150, damage: 35, interval: 0.145, reload: 2.5, recoil: 0.027, automatic: true },
+  usp: { name: 'USP SIDEARM', short: 'USP', caliber: '.45 ACP', capacity: 12, reserve: 96, damage: 27, interval: 0.28, reload: 1.5, recoil: 0.023, automatic: false },
 };
+
+export const ZOMBIE_HEALTH = 100;
+export const shotDamage = (weapon, headshot) => WEAPONS[weapon].damage * (headshot ? 4 : 1);
+export const killPoints = headshot => headshot ? 250 : 100;
+
+export function enemyKind(wave, index) {
+  if (wave >= 2 && index % 5 === 4) return 'headcrab';
+  if (wave >= 3 && index % 4 === 2) return 'runner';
+  return 'zombie';
+}
 
 export const WORLD_SIZE = 29;
 

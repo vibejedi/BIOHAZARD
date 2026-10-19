@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { createWorld, createZombie, createWeapon } from './world.js';
+import { createWeapon, effectTexture } from './weapon-view.js';
 import { GameAudio } from './audio.js';
 import { loadClassicAssets } from './classic-assets.js';
-import { loadDust2World } from './bsp-world.js';
-import { DIFFICULTIES, WEAPONS, circleBlocked, findPath, reloadAmmo, waveSize } from './rules.js';
+import { loadBspWorld } from './bsp-world.js';
+import { DIFFICULTIES, WEAPONS, ZOMBIE_HEALTH, shotDamage, killPoints, enemyKind, reloadAmmo, waveSize } from './rules.js';
+import { formatRunTime, recordRun, readRuns } from './runs.js';
+import { COURSES, courseWaves, stageEndWave } from './campaign.js';
 
 const $ = id => document.getElementById(id);
 const clamp = THREE.MathUtils.clamp;
-const formatTime = seconds => `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
 
 export class BiohazardGame {
   constructor(container, { onState, icon }) {
@@ -20,12 +21,18 @@ export class BiohazardGame {
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.setAttribute('aria-label', 'Biohazard 3D game view');
     this.camera = new THREE.PerspectiveCamera(72, 1, 0.05, 110); this.camera.rotation.order = 'YXZ';
-    this.world = createWorld(this.scene);
-    this.world.id = 'ashen'; this.world.name = 'ASHEN YARD';
-    this.worlds = { ashen: { scene: this.scene, world: this.world } };
+    this.flashlightOn = true;
+    this.flashlight = new THREE.SpotLight(0xffefd9, 200, 32, Math.PI / 7, 0.6, 1.1);
+    this.flashlight.position.set(0.1, -0.12, -0.12); this.flashlight.castShadow = true;
+    this.flashlight.shadow.mapSize.set(1024, 1024); this.flashlight.shadow.bias = -0.0003; this.flashlight.shadow.normalBias = 0.02;
+    const beamTarget = new THREE.Object3D(); beamTarget.position.set(0, -0.15, -20);
+    this.camera.add(this.flashlight, beamTarget); this.flashlight.target = beamTarget;
+    this.scene.background = new THREE.Color(0x171e19);
+    this.world = { id: null, dust: [] }; this.worlds = {}; this.courseId = 'dust2'; this.stageIndex = 0;
+    this.bloodTexture = effectTexture('blood');
     this.weaponScene = new THREE.Scene(); this.weaponCamera = new THREE.PerspectiveCamera(65, 1, 0.01, 5);
-    this.weaponScene.add(new THREE.HemisphereLight(0xf1ead4, 0x545e46, 3));
-    const gunLight = new THREE.DirectionalLight(0xffdeb5, 3); gunLight.position.set(-3, 4, -2); this.weaponScene.add(gunLight);
+    this.weaponScene.add(new THREE.HemisphereLight(0xc3d1db, 0x323d35, 0.8));
+    const gunLight = new THREE.DirectionalLight(0xe6d4b2, 0.65); gunLight.position.set(-3, 4, -2); this.weaponScene.add(gunLight);
     this.weapons = {}; for (const id of Object.keys(WEAPONS)) { this.weapons[id] = createWeapon(id); this.weaponScene.add(this.weapons[id].group); this.weapons[id].group.visible = false; this.weapons[id].group.scale.setScalar(id === 'usp' ? 0.85 : 0.72); }
     this.keys = new Set(); this.enemies = []; this.effects = []; this.corpses = [];
     this.raycaster = new THREE.Raycaster(); this.center = new THREE.Vector2();
@@ -56,8 +63,10 @@ export class BiohazardGame {
     for (const id of ['m4', 'ak', 'usp']) assets.installWeapon(this.weapons[id], id);
     await this.audio.loadSamples(assets.manifest.sounds);
     if (assets.manifest.world) {
-      this.worlds.dust2 = await loadDust2World(assets.manifest.world);
-      if (new URLSearchParams(location.search).get('map') !== 'ashen') this.selectMap('dust2');
+      const descriptions = [assets.manifest.world, ...(assets.manifest.campaignWorlds || [])];
+      const worlds = await Promise.all(descriptions.map(description => loadBspWorld(description)));
+      for (const loaded of worlds) this.worlds[loaded.world.id] = loaded;
+      this.selectCourse('dust2');
     }
     return assets;
   }
@@ -66,13 +75,29 @@ export class BiohazardGame {
     if (!this.worlds[id]) return;
     this.clearEntities();
     this.scene = this.worlds[id].scene; this.world = this.worlds[id].world;
+    this.scene.add(this.camera);
     this.eyeHeight = this.world.eyeHeight || 1.7; this.groundY = this.world.playerSpawn?.y || 0;
-    this.camera.far = id === 'dust2' ? 320 : 110; this.camera.updateProjectionMatrix();
-    document.querySelector('.mission-title h2').textContent = this.world.name;
-    document.querySelector('.mission-title p').textContent = id === 'dust2' ? 'Original CS 1.6 map · Zombie quarantine' : 'Industrial district · Quarantine sector 07';
+    this.camera.far = 320; this.camera.updateProjectionMatrix();
     document.querySelector('.scene-label strong').textContent = this.world.name;
-    document.querySelector('.radar-label').innerHTML = `${this.world.name} <b>${id === 'dust2' ? 'D2' : '07'}</b>`;
-    const select = document.getElementById('map-select'); if (select) select.value = id;
+    document.querySelector('.radar-label').textContent = this.world.name;
+  }
+
+  selectCourse(id) {
+    const course = COURSES[id];
+    if (this.state !== 'home' || !course || !course.stages.every(stage => this.worlds[stage.map])) return;
+    this.courseId = id; this.stageIndex = 0;
+    this.selectMap(course.stages[0].map);
+    document.querySelector('.mission-title h2').textContent = course.name;
+    document.querySelector('.mission-title p').textContent = course.description;
+    document.querySelector('.mission-meta span').innerHTML = `${this.icon('skull')} ${courseWaves(id)} HOSTILE WAVES`;
+    $('map-select').value = id;
+  }
+
+  placePlayer() {
+    this.eyeHeight = this.world.eyeHeight || 2; this.groundY = this.world.playerSpawn.y;
+    this.camera.position.copy(this.world.playerSpawn); this.camera.position.y += this.eyeHeight;
+    this.yaw = this.world.playerYaw || 0; this.pitch = -0.025; this.jumpHeight = 0; this.jumpVelocity = 0; this.recoil = 0;
+    this.look(0, 0);
   }
 
   resize() {
@@ -84,22 +109,26 @@ export class BiohazardGame {
   setState(state) { this.state = state; this.onState(state); this.resize(); }
 
   start(primary = 'm4', difficulty = 'operator') {
-    this.clearEntities(); this.audio.unlock();
-    this.primary = primary; this.difficulty = DIFFICULTIES[difficulty] || DIFFICULTIES.operator;
+    if (!this.world.id || !this.classicAssets) return;
+    this.stageIndex = 0; this.pendingStage = null;
+    this.selectMap(COURSES[this.courseId].stages[0].map); this.audio.unlock();
+    this.primary = primary; this.difficultyId = DIFFICULTIES[difficulty] ? difficulty : 'operator'; this.difficulty = DIFFICULTIES[this.difficultyId];
     this.health = this.difficulty.health; this.maxHealth = this.health; this.stamina = 100;
     this.cash = 0; this.kills = 0; this.shots = 0; this.headshots = 0; this.elapsed = 0;
+    this.score = 0; this.waveSplits = []; this.runStartedAt = performance.now(); this.runCompleted = false;
+    this.totalWaves = courseWaves(this.courseId);
+    this.spawnSerial = 0; this.setFlashlight(true);
     this.wave = 0; this.spawnRemaining = 0; this.spawnTimer = 0; this.nextWaveTimer = 3;
-    this.eyeHeight = this.world.eyeHeight || 1.7; this.groundY = this.world.playerSpawn?.y || 0;
-    if (this.world.playerSpawn) { this.camera.position.copy(this.world.playerSpawn); this.camera.position.y += this.eyeHeight; }
-    else this.camera.position.set(0, this.eyeHeight, 19);
-    this.yaw = this.world.playerYaw || 0; this.pitch = -0.025; this.jumpHeight = 0; this.jumpVelocity = 0;
+    this.placePlayer();
     this.recoil = 0; this.reloadTime = 0; this.hitTime = 0; this.damageTime = 0; this.lastShot = -10; this.shootTimer = 0;
     this.ammunition = Object.fromEntries(Object.entries(WEAPONS).map(([id, definition]) => [id, { ammo: definition.capacity, reserve: definition.reserve }]));
     this.keys.clear(); this.mouseDown = false; this.aiming = false; this.moveInput = { x: 0, z: 0 };
     $('killfeed').innerHTML = ''; $('reload-indicator').hidden = true; $('damage-vignette').style.opacity = 0;
+    $('hit-feedback').textContent = ''; $('hit-feedback').classList.remove('visible');
+    for (const view of Object.values(this.weapons)) { view.flashRemaining = 0; view.flash.visible = false; view.light.intensity = 0; }
     this.switchWeapon(primary); this.setState('playing'); this.requestPointer();
-    this.banner('OPERATION / 007', 'HOLD THE LINE.', 2.7);
-    this.notify(this.touch ? 'LEFT STICK TO MOVE · DRAG RIGHT TO LOOK' : 'WASD TO MOVE · CLICK TO FIRE · R TO RELOAD', 4);
+    this.banner(this.courseId === 'hl-campaign' ? 'CHAPTER 1 / 3 · ANOMALOUS MATERIALS' : 'OPERATION / DUST II', 'HOLD THE LINE.', 2.7);
+    this.notify(this.touch ? 'LEFT STICK TO MOVE · DRAG RIGHT TO LOOK · TAP FLASHLIGHT TO TOGGLE' : 'WASD TO MOVE · CLICK TO FIRE · R RELOAD · F FLASHLIGHT', 5);
     this.updateHud();
   }
 
@@ -118,20 +147,45 @@ export class BiohazardGame {
     if (document.pointerLockElement) document.exitPointerLock();
   }
 
-  resume() { if (this.state === 'paused') { this.setState('playing'); this.requestPointer(); this.clock.getDelta(); } }
+  resume() { if (this.state === 'paused') { this.elapsed = (performance.now() - this.runStartedAt) / 1000; this.setState('playing'); this.requestPointer(); this.clock.getDelta(); } }
   home() { this.setState('home'); if (document.pointerLockElement) document.exitPointerLock(); this.keys.clear(); this.mouseDown = false; this.clearEntities(); }
 
   finish(won) {
     if (this.state !== 'playing') return;
+    this.elapsed = (performance.now() - this.runStartedAt) / 1000;
     this.setState(won ? 'won' : 'dead'); if (document.pointerLockElement) document.exitPointerLock();
     this.keys.clear(); this.mouseDown = false; this.aiming = false;
     $('result-kicker').textContent = won ? 'QUARANTINE SECURED' : 'SIGNAL LOST';
-    $('result-title').textContent = won ? (this.world.id === 'dust2' ? 'SECTOR SECURED.' : 'YARD SECURED.') : 'OVERRUN.';
-    $('result-description').textContent = won ? 'Five waves. One operator. You made every round count.' : 'You held the line. Until you couldn’t. The quarantine deserves another shot.';
+    $('result-title').textContent = won ? (this.courseId === 'hl-campaign' ? 'CAMPAIGN CLEARED.' : 'SECTOR SECURED.') : 'OVERRUN.';
+    $('result-description').textContent = won ? (this.courseId === 'hl-campaign' ? 'Three chapters. Nine waves. Black Mesa is contained.' : 'Five waves. One operator. You made every round count.') : 'You held the line. Until you couldn’t. The quarantine deserves another shot.';
     $('result-wave').textContent = String(this.wave).padStart(2, '0');
-    $('result-kills').textContent = this.kills; $('result-time').textContent = formatTime(this.elapsed);
+    $('result-kills').textContent = this.kills; $('result-time').textContent = formatRunTime(this.elapsed * 1000);
+    $('result-score').textContent = this.score.toLocaleString(); $('result-headshots').textContent = this.headshots;
+    let rank = null;
+    if (won && this.runCompleted) {
+      const result = recordRun({ map: this.courseId, difficulty: this.difficultyId, elapsedMs: Math.round(this.elapsed * 1000), score: this.score, headshots: this.headshots, kills: this.kills, splits: this.waveSplits, date: new Date().toISOString() });
+      rank = result.rank;
+    }
+    $('result-rank').textContent = rank ? `#${rank}` : '—';
+    $('result-record-note').textContent = rank ? 'PERSONAL SPEED RANK · THIS DEVICE · PRACTICE POINTS ONLY' : won ? 'PRACTICE COMPLETE · NO RANKED RECORD' : 'CLEAR EVERY WAVE TO RECORD A FINISH TIME';
+    this.renderRecords();
     let best = 0; try { best = Number(localStorage.getItem('bh-best') || 0); if (this.kills > best) localStorage.setItem('bh-best', this.kills); } catch { /* Storage is optional. */ }
     $('best-score').textContent = `PERSONAL BEST / ${Math.max(best, this.kills)} HOSTILES DOWN`;
+  }
+
+  renderRecords() {
+    const rows = readRuns().filter(run => run.map === this.courseId && run.difficulty === ($('difficulty')?.value || 'operator'));
+    $('records-course').textContent = COURSES[this.courseId].name;
+    $('records-difficulty').textContent = ($('difficulty')?.value || 'operator').toUpperCase();
+    const body = $('records-body'); body.replaceChildren();
+    rows.slice(0, 10).forEach((run, index) => {
+      const row = document.createElement('tr');
+      for (const value of [index + 1, formatRunTime(run.elapsedMs), run.score.toLocaleString(), run.headshots]) {
+        const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell);
+      }
+      body.appendChild(row);
+    });
+    $('records-empty').hidden = rows.length > 0;
   }
 
   installControls() {
@@ -144,6 +198,7 @@ export class BiohazardGame {
       if (event.code === 'Digit1') this.switchWeapon(this.primary);
       if (event.code === 'Digit2') this.switchWeapon('usp');
       if (event.code === 'KeyE') this.resupply();
+      if (event.code === 'KeyF') this.setFlashlight(!this.flashlightOn);
       if (event.code === 'KeyP' || event.code === 'Escape') this.pause();
       if (event.code === 'Space' && this.jumpHeight <= 0.001) this.jumpVelocity = 5.2;
     });
@@ -173,6 +228,15 @@ export class BiohazardGame {
     this.camera.rotation.set(this.pitch + this.recoil * 0.3, this.yaw, 0);
   }
 
+  setFlashlight(enabled) {
+    this.flashlightOn = enabled;
+    this.flashlight.visible = enabled && this.state !== 'home';
+    const button = $('flashlight-toggle');
+    button.textContent = `F · FLASHLIGHT ${enabled ? 'ON' : 'OFF'}`;
+    button.setAttribute('aria-pressed', String(enabled));
+    button.setAttribute('aria-label', `Turn flashlight ${enabled ? 'off' : 'on'}`);
+  }
+
   installTouch() {
     let stickId = null, lookId = null, lookX = 0, lookY = 0;
     const joystick = $('joystick'), knob = joystick.querySelector('i');
@@ -194,6 +258,7 @@ export class BiohazardGame {
     $('touch-reload').addEventListener('click', () => this.reload());
     $('touch-switch').addEventListener('click', () => this.switchWeapon(this.weaponId === 'usp' ? this.primary : 'usp'));
     $('touch-supply').addEventListener('click', () => this.resupply());
+    $('flashlight-toggle').addEventListener('click', () => { if (['playing', 'paused'].includes(this.state)) this.setFlashlight(!this.flashlightOn); });
   }
 
   switchWeapon(id) {
@@ -221,45 +286,52 @@ export class BiohazardGame {
     if (ammunition.ammo <= 0) { this.reload(); return; }
     ammunition.ammo--; this.shots++; this.lastShot = this.elapsed; this.shootTimer = weapon.interval; this.recoil += weapon.recoil;
     this.audio.fire(this.weaponId);
-    const view = this.weapons[this.weaponId]; view.flash.visible = true; view.flash.rotation.z = Math.random() * 6; view.light.intensity = 1.5;
+    const view = this.weapons[this.weaponId]; view.flashRemaining = 0.09; view.flash.visible = true; view.flash.material.rotation = Math.random() * Math.PI; view.light.intensity = 4;
     view.animation?.play(view.shootAnimation, 0.25, true);
-    this.camera.updateMatrixWorld(); this.raycaster.setFromCamera(this.center, this.camera); this.raycaster.far = 90;
+    this.scene.updateMatrixWorld(true); this.camera.updateMatrixWorld(); this.raycaster.setFromCamera(this.center, this.camera); this.raycaster.far = 90;
     const hits = this.raycaster.intersectObjects([...this.world.walls, ...this.enemies.flatMap(enemy => enemy.hits)], false);
     let hitPoint = this.raycaster.ray.at(45, new THREE.Vector3());
     if (hits.length) {
       const hit = hits[0], enemy = hit.object.userData.enemy;
       hitPoint = hit.point;
       if (enemy && !enemy.dead) {
-        const headshot = hit.object.userData.head;
-        enemy.health -= weapon.damage * (headshot ? 3 : 1); enemy.stagger = 0.14;
-        this.burst(hit.point, 0x7c3c25, 8);
+        const headshot = Boolean(hit.object.userData.head), damage = shotDamage(this.weaponId, headshot);
+        enemy.health -= damage; enemy.stagger = 0.14;
+        this.score += headshot ? 25 : 5;
+        this.burst(hit.point.clone().addScaledVector(this.raycaster.ray.direction, -0.06), 0xd71919, headshot ? 30 : 18, true);
         if (enemy.health <= 0) this.kill(enemy, headshot);
-        this.hitTime = 0.16; $('hitmarker').classList.add('visible'); $('hitmarker').classList.toggle('kill', enemy.dead);
+        this.hitTime = headshot ? 0.5 : 0.3; $('hitmarker').classList.add('visible'); $('hitmarker').classList.toggle('kill', enemy.dead); $('hitmarker').classList.toggle('headshot', headshot);
+        $('hit-feedback').textContent = headshot ? `HEADSHOT · ${enemy.dead ? '+250 POINTS' : damage}` : `BODY HIT · ${damage}`;
+        $('hit-feedback').classList.add('visible'); $('hit-feedback').classList.toggle('headshot', headshot);
         this.audio.hit(enemy.dead);
       } else this.burst(hit.point, 0xd0b68a, 4);
     }
-    const start = new THREE.Vector3(0.25, -0.18, -0.7).applyMatrix4(this.camera.matrixWorld);
+    this.weaponScene.updateMatrixWorld(true);
+    const start = view.flash.getWorldPosition(new THREE.Vector3()).applyQuaternion(this.camera.quaternion).add(this.camera.position);
     const geometry = new THREE.BufferGeometry().setFromPoints([start, hitPoint]);
     const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xe6c78b, transparent: true, opacity: 0.5 })); this.scene.add(line);
-    this.effects.push({ object: line, ttl: 0.05, max: 0.05 });
+    line.frustumCulled = false;
+    this.effects.push({ object: line, ttl: 0.09, max: 0.09, kind: 'tracer' });
     this.updateHud();
   }
 
-  burst(position, color, amount) {
+  burst(position, color, amount, blood = false) {
     const positions = new Float32Array(amount * 3), velocities = [];
     for (let i = 0; i < amount; i++) { positions.set([position.x, position.y, position.z], i * 3); velocities.push(new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 3, (Math.random() - 0.5) * 3)); }
     const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const object = new THREE.Points(geometry, new THREE.PointsMaterial({ color, size: 0.055, transparent: true })); this.scene.add(object);
-    this.effects.push({ object, velocities, ttl: 0.4, max: 0.4 });
+    const object = new THREE.Points(geometry, new THREE.PointsMaterial({ color, size: blood ? 7 : 4, sizeAttenuation: false, map: this.bloodTexture, transparent: true, depthWrite: false, toneMapped: false, opacity: 1 }));
+    object.frustumCulled = false; object.renderOrder = 5; this.scene.add(object);
+    this.effects.push({ object, velocities, ttl: blood ? 0.7 : 0.35, max: blood ? 0.7 : 0.35, kind: blood ? 'blood' : 'impact' });
   }
 
   kill(enemy, headshot) {
-    enemy.dead = true; this.kills++; this.cash += headshot ? 150 : 100; if (headshot) this.headshots++;
-    enemy.animation?.play(headshot ? 'dieheadshot' : 'diesimple', 1.2, true, false);
+    headshot = Boolean(headshot) && enemy.kind !== 'headcrab';
+    enemy.dead = true; this.kills++; this.cash += headshot ? 150 : 100; this.score += killPoints(headshot); if (headshot) this.headshots++;
+    enemy.animation?.play(enemy.kind === 'headcrab' ? 'dieback' : headshot ? 'dieheadshot' : 'diesimple', 1.2, true, false);
     this.enemies = this.enemies.filter(other => other !== enemy);
     this.corpses.push({ ...enemy, floor: enemy.groundY ?? enemy.group.position.y, time: 0, tilt: (Math.random() - 0.5) * 0.5 });
     const item = document.createElement('div');
-    item.innerHTML = `<span>YOU</span>${this.icon('target')}<b>${enemy.runner ? 'RUNNER' : 'INFECTED'}</b>${headshot ? '<em>HEADSHOT</em>' : ''}`;
+    item.innerHTML = `<span>YOU</span>${this.icon('target')}<b>${enemy.kind === 'headcrab' ? 'HEADCRAB' : enemy.runner ? 'RUNNER' : 'INFECTED'}</b>${headshot ? '<em>HEADSHOT</em>' : ''}`;
     $('killfeed').appendChild(item); if ($('killfeed').children.length > 4) $('killfeed').firstElementChild.remove();
     setTimeout(() => item.remove(), 4500);
     this.updateHud();
@@ -268,7 +340,7 @@ export class BiohazardGame {
   resupply() {
     if (this.state !== 'playing') return;
     if (this.distanceToSupply() > 3.5) { this.notify('FIND THE GREEN FIELD SUPPLY CRATE · CHECK YOUR RADAR'); return; }
-    if (this.cash < 500) { this.notify(`RESUPPLY COSTS $500 · YOU HAVE $${this.cash}`); return; }
+    if (this.cash < 500) { this.notify(`RESUPPLY COSTS 500 CREDITS · YOU HAVE ${this.cash}`); return; }
     this.cash -= 500; this.health = this.maxHealth; this.reloadTime = 0; $('reload-indicator').hidden = true;
     for (const [id, definition] of Object.entries(WEAPONS)) this.ammunition[id] = { ammo: definition.capacity, reserve: definition.reserve };
     this.audio.tone(520, 0.25, 0.04, 'triangle', 780); this.notify('HEALTH RESTORED · AMMUNITION REFILLED'); this.updateHud();
@@ -289,23 +361,22 @@ export class BiohazardGame {
     this.audio.wave(); this.updateHud();
   }
 
-  spawnEnemy() {
-    const runner = this.wave >= 3 && Math.random() < 0.25;
-    const zombie = this.classicAssets ? this.classicAssets.createZombie() : createZombie(runner);
+  spawnEnemy(kind) {
+    kind ||= enemyKind(this.wave, this.spawnSerial++);
+    const runner = kind === 'runner', crab = kind === 'headcrab';
+    const zombie = crab ? this.classicAssets.createHeadcrab() : this.classicAssets.createZombie();
     const candidates = this.world.getSpawns?.({ x: this.camera.position.x, y: this.groundY, z: this.camera.position.z }) || this.world.spawns;
     const spawn = candidates.filter(s => s.distanceTo(this.camera.position) > 8);
     const source = spawn[Math.floor(Math.random() * spawn.length)] || this.world.spawns[0];
     zombie.group.position.copy(source);
-    const enemy = { ...zombie, groundY: source.y, health: (65 + this.wave * 9) * this.difficulty.enemyHealth, speed: (runner ? 2.7 : 1.05 + this.wave * 0.09) * this.difficulty.speed, runner, dead: false, path: [], pathTime: Math.random(), attackTimer: 0.6, stagger: 0, phase: Math.random() * 7 };
+    const enemy = { ...zombie, kind, groundY: source.y, health: crab ? 50 : ZOMBIE_HEALTH, speed: (crab ? 2.4 : runner ? 2.7 : 1.05 + this.wave * 0.09) * this.difficulty.speed, runner, dead: false, path: [], pathTime: Math.random(), attackTimer: 0.6, stagger: 0, phase: Math.random() * 7, leapTime: 0, leapHit: false };
+    enemy.animation.mixer.timeScale = runner ? 1.65 : 1;
     enemy.hits.forEach(mesh => { mesh.userData.enemy = enemy; });
     this.enemies.push(enemy); this.scene.add(enemy.group); return enemy;
   }
 
   moveEntity(position, dx, dz, radius, ground = position.y) {
-    if (this.world.move) return this.world.move(position, dx, dz, ground);
-    if (!circleBlocked(position.x + dx, position.z, radius, this.world.obstacles)) position.x += dx;
-    if (!circleBlocked(position.x, position.z + dz, radius, this.world.obstacles)) position.z += dz;
-    return 0;
+    return this.world.move(position, dx, dz, ground);
   }
 
   updatePlayer(dt) {
@@ -334,7 +405,6 @@ export class BiohazardGame {
     gun.position.z = (weaponView.classic ? -0.16 : -0.56) + this.recoil * 2 + reloadTilt * (weaponView.classic ? 0 : 0.16);
     gun.rotation.set(this.recoil * 2 - reloadTilt * (weaponView.classic ? 0 : 0.65), reloadTilt * (weaponView.classic ? 0 : 0.3), -reloadTilt * (weaponView.classic ? 0 : 0.5));
     $('crosshair').classList.toggle('aiming', this.aiming); $('crosshair').classList.toggle('firing', this.shootTimer > WEAPONS[this.weaponId].interval * 0.6);
-    if (this.mouseDown && WEAPONS[this.weaponId].automatic) this.shoot();
     if (this.reloadTime > 0) {
       this.reloadTime -= dt;
       if (this.reloadTime <= 0) {
@@ -342,8 +412,9 @@ export class BiohazardGame {
         $('reload-indicator').hidden = true; this.audio.reload(); this.updateHud();
       }
     }
-    const lastFire = this.elapsed - this.lastShot;
-    const view = this.weapons[this.weaponId]; view.flash.visible = lastFire < 0.045; view.light.intensity = lastFire < 0.045 ? 1.5 : 0;
+    const view = this.weapons[this.weaponId];
+    view.flashRemaining = Math.max(0, view.flashRemaining - dt); view.flash.visible = view.flashRemaining > 0; view.light.intensity = view.flash.visible ? 4 : 0;
+    if (this.mouseDown && WEAPONS[this.weaponId].automatic) this.shoot();
     $('interaction').hidden = this.distanceToSupply() > 3.5;
   }
 
@@ -354,9 +425,28 @@ export class BiohazardGame {
       enemy.attackTimer -= dt; enemy.stagger = Math.max(0, enemy.stagger - dt); enemy.pathTime -= dt;
       enemy.animation?.update(dt);
       enemy.group.rotation.y = Math.atan2(dx, dz);
+      if (enemy.kind === 'headcrab' && enemy.leapTime > 0) {
+        enemy.leapTime = Math.max(0, enemy.leapTime - dt);
+        enemy.groundY = this.moveEntity(pos, enemy.leapDirection.x * 5.5 * dt, enemy.leapDirection.y * 5.5 * dt, 0.25, enemy.groundY);
+        pos.y = enemy.groundY + Math.sin((1 - enemy.leapTime / 0.65) * Math.PI) * 0.9;
+        if (!enemy.leapHit && Math.hypot(player.x - pos.x, player.z - pos.z) < 1 && Math.abs(enemy.groundY - this.groundY) < 0.8 && this.jumpHeight < 0.8) {
+          enemy.leapHit = true; this.takeDamage(Math.round(this.difficulty.damage * 0.75));
+        }
+        if (!enemy.leapTime) { pos.y = enemy.groundY; enemy.animation.play('run'); }
+        continue;
+      }
+      if (enemy.kind === 'headcrab' && distance < 4.5 && enemy.attackTimer <= 0 && Math.abs(enemy.groundY - this.groundY) < 0.8) {
+        const origin = pos.clone(); origin.y += 0.45;
+        this.raycaster.ray.origin.copy(origin); this.raycaster.ray.direction.copy(player).sub(origin).normalize(); this.raycaster.far = origin.distanceTo(player);
+        if (!this.raycaster.intersectObjects(this.world.walls, false).length) {
+          enemy.leapTime = 0.65; enemy.leapHit = false; enemy.leapDirection = new THREE.Vector2(dx, dz).normalize(); enemy.attackTimer = 2.2;
+          enemy.animation.play('jump', 0.65, true); this.audio.sample('crabAttack', 0.3);
+          continue;
+        }
+      }
       if (distance > 1.15 || Math.abs((enemy.groundY ?? pos.y) - this.groundY) > 1) {
-        enemy.animation?.play('walk');
-        if (enemy.pathTime <= 0) { enemy.path = this.world.findPath ? this.world.findPath({ x: pos.x, y: enemy.groundY, z: pos.z }, { x: player.x, y: this.groundY, z: player.z }) : findPath(pos, player, this.world.obstacles); enemy.pathTime = 0.9 + Math.random() * 0.8; }
+        enemy.animation?.play(enemy.kind === 'headcrab' ? 'run' : 'walk');
+        if (enemy.pathTime <= 0) { enemy.path = this.world.findPath({ x: pos.x, y: enemy.groundY, z: pos.z }, { x: player.x, y: this.groundY, z: player.z }); enemy.pathTime = 0.9 + Math.random() * 0.8; }
         let tx = player.x, tz = player.z;
         if ((this.world.findPath || distance > 2.5) && enemy.path.length) {
           while (enemy.path.length > 1 && Math.hypot(pos.x - enemy.path[0].x, pos.z - enemy.path[0].z) < 0.45) enemy.path.shift();
@@ -372,11 +462,11 @@ export class BiohazardGame {
         enemy.arms.forEach((arm, i) => { arm.rotation.x = -0.9 + Math.sin(enemy.phase + i) * 0.15; });
         enemy.group.position.y = enemy.groundY + Math.abs(Math.sin(enemy.phase)) * 0.035;
       } else {
-        enemy.animation?.play('attack1');
+        enemy.animation?.play(enemy.kind === 'headcrab' ? 'run' : 'attack1');
         enemy.arms.forEach(arm => { arm.rotation.x = -1.4 + Math.sin(this.elapsed * 10) * 0.3; });
         if (enemy.attackTimer <= 0 && this.jumpHeight < 0.8) { enemy.attackTimer = 1.15; this.takeDamage(this.difficulty.damage); }
       }
-      this.audio.growl(distance);
+      this.audio.growl(distance, enemy.kind);
     }
   }
 
@@ -386,13 +476,30 @@ export class BiohazardGame {
       if (this.spawnTimer <= 0) { this.spawnEnemy(); this.spawnRemaining--; this.spawnTimer = this.wave < 3 ? 1.2 : 0.85; }
     }
     if (!this.spawnRemaining && !this.enemies.length && this.nextWaveTimer === null) {
-      if (this.wave === 5) { this.finish(true); return; }
+      const elapsedMs = Math.round(performance.now() - this.runStartedAt);
+      this.waveSplits.push({ wave: this.wave, elapsedMs, map: this.world.id });
+      if (this.wave === this.totalWaves) { this.runCompleted = this.waveSplits.length === this.totalWaves; this.finish(true); return; }
       this.nextWaveTimer = 8; this.cash += 200; this.health = Math.min(this.maxHealth, this.health + 15);
       for (const id of [this.primary, 'usp']) this.ammunition[id].reserve += id === 'usp' ? 12 : 30;
       this.banner(`WAVE ${String(this.wave).padStart(2, '0')} CLEARED`, 'A MOMENT TO BREATHE.', 4);
-      this.notify('+$200 · +15 HEALTH · RESERVE AMMO RECOVERED', 4);
+      this.notify('+200 CREDITS · +15 HEALTH · RESERVE AMMO RECOVERED', 4);
+      if (this.wave === stageEndWave(this.courseId, this.stageIndex)) {
+        this.pendingStage = this.stageIndex + 1;
+        this.banner(`CHAPTER ${this.stageIndex + 1} CLEARED`, 'MOVING TO THE NEXT SECTOR.', 5);
+      }
     }
-    if (this.nextWaveTimer !== null) { this.nextWaveTimer -= dt; if (this.nextWaveTimer <= 0) this.startWave(); }
+    if (this.nextWaveTimer !== null) {
+      this.nextWaveTimer -= dt;
+      if (this.nextWaveTimer <= 0) {
+        if (this.pendingStage !== null) {
+          this.stageIndex = this.pendingStage; this.pendingStage = null;
+          this.selectMap(COURSES[this.courseId].stages[this.stageIndex].map); this.placePlayer();
+          this.keys.clear(); this.mouseDown = false; this.aiming = false; this.moveInput = { x: 0, z: 0 }; this.recoil = 0;
+          this.notify(`CHAPTER ${this.stageIndex + 1} / 3 · ${this.world.name}`, 5);
+        }
+        this.startWave();
+      }
+    }
   }
 
   updateEffects(dt) {
@@ -441,10 +548,13 @@ export class BiohazardGame {
     if (!this.ammunition) return;
     const ammo = this.ammunition[this.weaponId], weapon = WEAPONS[this.weaponId];
     $('health').textContent = Math.ceil(this.health); $('health-bar').style.width = `${this.health / this.maxHealth * 100}%`;
-    $('stamina-bar').style.width = `${this.stamina}%`; $('cash').textContent = `$${this.cash.toLocaleString()}`; $('kills').textContent = `${this.kills} KILLS`;
+    $('stamina-bar').style.width = `${this.stamina}%`; $('cash').textContent = `${this.cash.toLocaleString()} CR`; $('kills').textContent = `${this.kills} KILLS`;
+    $('run-time').textContent = formatRunTime(this.elapsed * 1000); $('run-score').textContent = `${this.score.toLocaleString()} PTS`; $('run-headshots').textContent = `${this.headshots} HEADSHOTS`;
     $('ammo').textContent = String(ammo.ammo).padStart(2, '0'); $('reserve').textContent = ammo.reserve; $('weapon-name').textContent = weapon.name; $('caliber').textContent = weapon.caliber;
     document.querySelector('.ammo-panel').classList.toggle('low', ammo.ammo <= 5);
     $('wave').textContent = String(Math.max(1, this.wave)).padStart(2, '0');
+    $('wave-total').textContent = `/ ${String(this.totalWaves).padStart(2, '0')}`;
+    $('run-stage').textContent = this.courseId === 'hl-campaign' ? `CHAPTER ${this.stageIndex + 1} / 3 · ${this.world.name}` : 'DUST II · SURVIVAL';
     $('remaining').textContent = this.nextWaveTimer !== null ? `NEXT WAVE IN ${Math.ceil(this.nextWaveTimer)}s` : `${this.spawnRemaining + this.enemies.length} HOSTILES REMAINING`;
     const degrees = ((-this.yaw * 180 / Math.PI) % 360 + 360) % 360;
     $('heading').textContent = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(degrees / 45) % 8];
@@ -452,42 +562,35 @@ export class BiohazardGame {
   }
 
   drawRadar() {
-    if (this.world.drawRadar) return this.world.drawRadar(this.radar, this.camera.position, this.enemies, this.yaw, this.groundY);
-    const ctx = this.radar, size = 160, scale = 2.5;
-    ctx.clearRect(0, 0, size, size); ctx.fillStyle = '#1c2b23'; ctx.fillRect(0, 0, size, size);
-    ctx.strokeStyle = '#b5c59d15'; ctx.lineWidth = 1;
-    for (let i = 0; i < size; i += 20) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, size); ctx.moveTo(0, i); ctx.lineTo(size, i); ctx.stroke(); }
-    ctx.fillStyle = '#7f8d7066';
-    for (const o of this.world.obstacles) ctx.fillRect(80 + (o.x - o.w / 2) * scale, 80 + (o.z - o.d / 2) * scale, o.w * scale, o.d * scale);
-    ctx.fillStyle = '#bacb8a'; ctx.fillRect(80 + this.world.supplies.x * scale - 2, 80 + this.world.supplies.z * scale - 2, 4, 4);
-    for (const enemy of this.enemies) { ctx.fillStyle = enemy.runner ? '#f9b875' : '#ee693b'; ctx.beginPath(); ctx.arc(80 + enemy.group.position.x * scale, 80 + enemy.group.position.z * scale, 2.4, 0, Math.PI * 2); ctx.fill(); }
-    ctx.save(); ctx.translate(80 + this.camera.position.x * scale, 80 + this.camera.position.z * scale); ctx.rotate(-this.yaw);
-    ctx.fillStyle = '#eff2da'; ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-3.5, 4); ctx.lineTo(0, 2); ctx.lineTo(3.5, 4); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#c1d9a51c'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 25, -Math.PI * 0.7, -Math.PI * 0.3); ctx.closePath(); ctx.fill(); ctx.restore();
-    ctx.fillStyle = '#c4cfaf'; ctx.font = '8px monospace'; ctx.fillText('N', 77, 10);
+    this.world.drawRadar(this.radar, this.camera.position, this.enemies, this.yaw, this.groundY);
   }
 
   frame() {
     const dt = Math.min(this.clock.getDelta(), 0.05); this.lifeTime += dt;
+    if (['playing', 'paused'].includes(this.state)) {
+      this.elapsed = (performance.now() - this.runStartedAt) / 1000;
+      $('run-time').textContent = formatRunTime(this.elapsed * 1000);
+    }
     if (this.state === 'home') {
       this.menuTime += dt;
       if (this.world.menuPosition) { this.camera.position.copy(this.world.menuPosition); this.camera.position.x += Math.sin(this.menuTime * 0.04) * 0.4; this.camera.lookAt(this.world.menuTarget); }
       else { this.camera.position.set(7 + Math.sin(this.menuTime * 0.04) * 1.5, 4.2, 24); this.camera.lookAt(-3, 2.5, -9); }
       this.camera.fov = 64; this.camera.updateProjectionMatrix();
     } else if (this.state === 'playing') {
-      this.elapsed += dt; this.shootTimer = Math.max(0, this.shootTimer - dt);
+      this.shootTimer = Math.max(0, this.shootTimer - dt);
       this.updatePlayer(dt); this.updateEnemies(dt);
       if (this.state === 'playing') this.updateWaves(dt);
       this.updateEffects(dt);
       this.bannerTime -= dt; this.notificationTime -= dt; this.hitTime -= dt; this.damageTime = Math.max(0, this.damageTime - dt);
       if (this.bannerTime <= 0) $('wave-banner').classList.remove('visible');
       if (this.notificationTime <= 0) $('notification').classList.remove('visible');
-      if (this.hitTime <= 0) $('hitmarker').classList.remove('visible');
+      if (this.hitTime <= 0) { $('hitmarker').classList.remove('visible'); $('hit-feedback').classList.remove('visible'); }
       $('damage-vignette').style.opacity = this.damageTime * 1.5 + (this.health < 25 ? 0.13 : 0);
       this.uiTime += dt; if (this.uiTime > 0.09) { this.updateHud(); this.uiTime = 0; }
     }
     this.world.dust.forEach(particles => { particles.rotation.y = Math.sin(this.lifeTime * 0.008) * 0.05; });
     this.world.update?.(this.camera, this.state);
+    this.flashlight.visible = this.flashlightOn && this.state !== 'home';
     this.scene.updateMatrixWorld();
     this.renderer.autoClear = true; this.renderer.render(this.scene, this.camera);
     if (['playing', 'paused', 'dead', 'won'].includes(this.state) && this.weaponId) {

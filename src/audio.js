@@ -45,5 +45,5 @@ export class GameAudio {
   hit(kill) { this.tone(kill ? 850 : 460, 0.06, 0.04, 'triangle', kill ? 420 : 200); }
   hurt() { if (this.sample('hurt', 0.4)) return; this.noise(0.3, 0.14, 650); this.tone(65, 0.25, 0.13, 'sine', 30); }
   wave() { this.tone(220, 0.55, 0.045, 'triangle', 110); setTimeout(() => this.tone(330, 0.5, 0.04, 'triangle', 165), 200); }
-  growl(distance) { if (this.enabled && distance < 12 && performance.now() - this.lastGrowl > 3500) { this.lastGrowl = performance.now(); if (this.sample(Math.random() < 0.5 ? 'zombie1' : 'zombie2', 0.2 * (1 - distance / 15))) return; this.tone(63, 0.8, 0.045 * (1 - distance / 15), 'sawtooth', 33); this.noise(0.7, 0.035, 170); } }
+  growl(distance, kind) { if (this.enabled && distance < 12 && performance.now() - this.lastGrowl > 3500) { this.lastGrowl = performance.now(); const name = kind === 'headcrab' ? 'crabIdle' : Math.random() < 0.5 ? 'zombie1' : 'zombie2'; if (this.sample(name, 0.2 * (1 - distance / 15))) return; this.tone(63, 0.8, 0.045 * (1 - distance / 15), 'sawtooth', 33); this.noise(0.7, 0.035, 170); } }
 }

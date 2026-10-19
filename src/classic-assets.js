@@ -28,12 +28,29 @@ export function animator(scene, clips, idle) {
   return { mixer, play, update(dt) { mixer.update(dt); if (remaining > 0) { remaining -= dt; if (remaining <= 0) play(idle); } }, dispose() { mixer.stopAllAction(); mixer.uncacheRoot(scene); } };
 }
 
+export function installHitboxes(model, descriptions, requireHead = true) {
+  let bones;
+  model.traverse(object => { if (object.isSkinnedMesh && !bones) bones = object.skeleton.bones; });
+  if (!bones || !descriptions?.length || (requireHead && !descriptions.some(box => box.group === 1))) throw new Error('Original monster hitboxes are missing. Prepare the game assets again.');
+  return descriptions.map(description => {
+    const bone = bones[description.bone];
+    if (!bone) throw new Error('Zombie hitbox references a missing bone.');
+    const min = new THREE.Vector3(...description.min), max = new THREE.Vector3(...description.max);
+    const size = max.clone().sub(min);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.name = description.group === 1 ? 'head_hitbox' : 'body_hitbox';
+    hit.position.copy(min.add(max).multiplyScalar(0.5)); hit.userData.head = description.group === 1; hit.userData.hitGroup = description.group;
+    bone.add(hit);
+    return hit;
+  });
+}
+
 export async function loadClassicAssets() {
   const status = await mediaJSON('status.json').catch(() => ({ available: false }));
   if (!status.available) return null;
   const manifest = await mediaJSON('manifest.json');
   const loader = new GLTFLoader();
-  const names = ['zombie', 'm4', 'ak', 'usp'];
+  const names = ['zombie', 'headcrab', 'm4', 'ak', 'usp'];
   const loaded = await Promise.all(names.map(name => loader.loadAsync(mediaURL(`${name}.glb`))));
   const templates = Object.fromEntries(names.map((name, index) => [name, loaded[index]]));
   for (const template of loaded) template.scene.traverse(object => {
@@ -49,11 +66,17 @@ export async function loadClassicAssets() {
       const template = templates.zombie, model = clone(template.scene), group = new THREE.Group();
       model.rotation.y = -Math.PI / 2; group.add(model);
       const animation = animator(model, template.animations, 'walk');
-      const hidden = new THREE.MeshBasicMaterial({ visible: false });
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.35, 0.5), hidden); torso.position.set(0, 0.85, 0);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.47, 0.48), hidden); head.position.set(0, 1.78, 0.12); head.userData.head = true;
-      group.add(torso, head);
-      return { group, hits: [torso, head], legs: [], arms: [], animation, classic: true };
+      const hits = installHitboxes(model, manifest.models.zombie.hitboxes);
+      animation.update(0);
+      return { group, hits, legs: [], arms: [], animation, classic: true };
+    },
+    createHeadcrab() {
+      const template = templates.headcrab, model = clone(template.scene), group = new THREE.Group();
+      model.rotation.y = -Math.PI / 2; group.add(model);
+      const animation = animator(model, template.animations, 'run');
+      const hits = installHitboxes(model, manifest.models.headcrab.hitboxes, false);
+      animation.update(0);
+      return { group, hits, legs: [], arms: [], animation, classic: true };
     },
     installWeapon(weapon, id) {
       const template = templates[id], model = clone(template.scene);
@@ -67,13 +90,21 @@ export async function loadClassicAssets() {
         weapon.group.remove(child); child.geometry?.dispose(); child.material?.dispose();
       }
       weapon.group.add(mirror); weapon.group.scale.setScalar(1);
-      weapon.flash.position.set(0.16, -0.05, -0.95); weapon.light.position.copy(weapon.flash.position);
+      let bones;
+      model.traverse(object => { if (object.isSkinnedMesh && !bones) bones = object.skeleton.bones; });
+      // Original unsilenced muzzle attachments follow the animated barrel.
+      const attachment = manifest.models[id].attachments?.[id === 'ak' ? 0 : 2];
+      if (!attachment || !bones?.[attachment.bone]) throw new Error(`Missing muzzle attachment for ${id}.`);
+      bones[attachment.bone].add(weapon.flash, weapon.light);
+      weapon.flash.position.set(...attachment.position); weapon.light.position.copy(weapon.flash.position);
+      weapon.flash.scale.setScalar(id === 'usp' ? 0.14 : 0.22);
       weapon.classic = true;
       const idle = id === 'ak' ? 'idle1' : 'idle_unsil';
       weapon.animation = animator(model, template.animations, idle);
       weapon.idleAnimation = idle;
       weapon.shootAnimation = id === 'ak' ? 'shoot1' : 'shoot1_unsil';
       weapon.reloadAnimation = id === 'ak' ? 'reload' : 'reload_unsil';
+      weapon.animation.update(0);
     },
   };
 }

@@ -1,8 +1,8 @@
 # Play online with GitHub Pages
 
 The `main` branch contains the source. The `gh-pages` branch contains the complete
-static browser game, including the converted Dust2 map, models, textures, sounds,
-and fonts. It is about 11 MB. The original installer, extracted game folders,
+static browser game, including Dust II, three Half-Life campaign maps, models, textures, sounds,
+and fonts. The original installer, extracted game folders,
 native libraries, and development dependencies are excluded.
 
 ## Enable hosting once
@@ -39,5 +39,5 @@ automatically once Pages is enabled. Commit and push source changes separately.
 
 The prepared media is retained in this cloud environment, rather than in `main`.
 A fresh source-only clone needs the supplied game data converted first; see the
-asset preparation instructions in the project README. A source-only build uses
-the procedural fallback map and is intentionally rejected by this publisher.
+asset preparation instructions in the project README. A source-only build cannot enter gameplay without the required original media
+and is intentionally rejected by this publisher.

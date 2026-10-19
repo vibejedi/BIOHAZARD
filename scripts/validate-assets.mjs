@@ -13,10 +13,10 @@ for (const [name, model] of Object.entries(manifest.models)) {
   console.log(`${name}: ${numErrors} glTF errors, ${numWarnings} warnings, ${model.animations.length} animations`);
   if (numErrors || numWarnings) { failed = true; console.error(result.issues.messages.filter(issue => issue.severity < 2)); }
 }
-if (manifest.world) {
-  const data = await fs.readFile(join(root, manifest.world.geometry));
-  const result = await validator.validateBytes(new Uint8Array(data), { uri: manifest.world.geometry });
-  console.log(`${manifest.world.name}: ${result.issues.numErrors} glTF errors, ${result.issues.numWarnings} warnings, ${manifest.world.faces} faces`);
+for (const world of [manifest.world, ...(manifest.campaignWorlds || [])].filter(Boolean)) {
+  const data = await fs.readFile(join(root, world.geometry));
+  const result = await validator.validateBytes(new Uint8Array(data), { uri: world.geometry });
+  console.log(`${world.name}: ${result.issues.numErrors} glTF errors, ${result.issues.numWarnings} warnings, ${world.faces} faces`);
   if (result.issues.numErrors || result.issues.numWarnings) { failed = true; console.error(result.issues.messages.filter(issue => issue.severity < 2)); }
 }
 if (manifest.maps.length !== 27) console.log(`Imported package contains ${manifest.maps.length} CS maps.`);
