@@ -3,13 +3,22 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { mediaURL, mediaJSON } from './media.js';
 
-function animator(scene, clips, idle) {
+export function animator(scene, clips, idle) {
   const mixer = new THREE.AnimationMixer(scene), actions = new Map(clips.map(clip => [clip.name, mixer.clipAction(clip)]));
   let active = null, remaining = 0;
   const play = (name, duration = 0, restart = false, returnToIdle = true) => {
     const action = actions.get(name);
     if (!action || (active === action && !restart)) return;
-    active?.fadeOut(0.08); action.reset().fadeIn(0.08).play();
+    // Restarting the same firing action must retain its full contribution.
+    // Fading it back in leaves no other pose underneath during automatic fire,
+    // so Three.js blends the arms toward the skeleton's bind pose every shot.
+    if (active === action) {
+      action.reset().setEffectiveWeight(1).play();
+    } else {
+      active?.fadeOut(0.08);
+      action.reset().setEffectiveWeight(1).play();
+      if (active) action.fadeIn(0.08);
+    }
     action.setLoop(duration ? THREE.LoopOnce : THREE.LoopRepeat, duration ? 1 : Infinity);
     action.clampWhenFinished = Boolean(duration);
     action.timeScale = duration ? action.getClip().duration / duration : 1;

@@ -33,6 +33,48 @@ test('local CS models animate, share resources safely, and decoded original audi
   expect(errors).toEqual([]);
 });
 
+test('repeated shots keep the imported M4, AK, and USP arms fully animated', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/?test=1');
+  await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#deploy').click();
+  const results = await page.evaluate(() => {
+    const g = window.__biohazard; g.nextWaveTimer = 999; g.clearEntities();
+    const results = [];
+    for (const id of ['m4', 'ak', 'usp']) {
+      g.switchWeapon(id);
+      const view = g.weapons[id], animation = view.animation;
+      animation.update(0.2);
+      let minimumWeight = Infinity, finiteBones = true;
+      const bones = [];
+      animation.mixer.getRoot().traverse(object => { if (object.isBone) bones.push(object); });
+      for (let shot = 0; shot < 8; shot++) {
+        g.shootTimer = 0; g.shoot();
+        for (let frame = 0; frame < 7; frame++) {
+          animation.update(0.015);
+          // Inspect the mixer here to detect accidental blending with the bind
+          // pose; rendering and ammunition checks alone miss the arm snap.
+          const weight = animation.mixer._actions.filter(action => action.isScheduled()).reduce((sum, action) => sum + action.getEffectiveWeight(), 0);
+          minimumWeight = Math.min(minimumWeight, weight);
+          finiteBones &&= bones.every(bone => [...bone.position.toArray(), ...bone.quaternion.toArray()].every(Number.isFinite));
+        }
+      }
+      animation.update(0.4); animation.update(0.1);
+      results.push({ id, minimumWeight, finiteBones, bones: bones.length, ammo: g.ammunition[id].ammo });
+    }
+    g.switchWeapon('m4'); g.state = 'paused';
+    return results;
+  });
+  for (const result of results) {
+    expect(result.minimumWeight, `${result.id} loses its arm pose during repeated shots`).toBeGreaterThanOrEqual(0.999);
+    expect(result.finiteBones).toBe(true);
+    expect(result.bones).toBeGreaterThan(0);
+    expect(result.ammo).toBe(result.id === 'usp' ? 4 : 22);
+  }
+  await page.screenshot({ path: 'test-results/weapon-animation-fixed.png' });
+  expect(errors).toEqual([]);
+});
+
 test('the installer, native libraries, and traversal paths are not served', async ({ request }) => {
   for (const path of ['/game-assets/source/Counter-Strike.exe', '/game-assets/extracted/app/cstrike/dlls/mp.dll', '/@fs/workspace/BIOHAZARD/game-assets/source/Counter-Strike.exe']) {
     const response = await request.head(path);
