@@ -1,0 +1,436 @@
+{
+  "format": 1,
+  "models": {
+    "zombie": {
+      "file": "zombie.glb",
+      "source": "zombie.mdl",
+      "sha256": "faf9c8de4eb9bdb5d7e5cc56908229669c5b58daa7d0de421a434049dabda311",
+      "bones": 49,
+      "materials": 19,
+      "primitives": 19,
+      "animations": [
+        {
+          "name": "idle1",
+          "frames": 31,
+          "fps": 15.0
+        },
+        {
+          "name": "flinchsmall",
+          "frames": 7,
+          "fps": 22.0
+        },
+        {
+          "name": "attack1",
+          "frames": 36,
+          "fps": 15.0
+        },
+        {
+          "name": "attack2",
+          "frames": 21,
+          "fps": 15.0
+        },
+        {
+          "name": "walk",
+          "frames": 60,
+          "fps": 22.0
+        },
+        {
+          "name": "dieheadshot",
+          "frames": 27,
+          "fps": 20.0
+        },
+        {
+          "name": "diesimple",
+          "frames": 21,
+          "fps": 20.0
+        }
+      ],
+      "bounds": [
+        [
+          -20.846114414033217,
+          -13.216227572634889,
+          -0.0536001665807575
+        ],
+        [
+          21.973596896747477,
+          11.910734215237436,
+          61.214447691079165
+        ]
+      ],
+      "bytes": 714976
+    },
+    "headcrab": {
+      "file": "headcrab.glb",
+      "source": "headcrab.mdl",
+      "sha256": "71fc734495878d0137b5e167e86eea9a0fcef9f5710c0fd9e28bf94ddcedce5c",
+      "bones": 29,
+      "materials": 5,
+      "primitives": 5,
+      "animations": [
+        {
+          "name": "idle1",
+          "frames": 31,
+          "fps": 20.0
+        },
+        {
+          "name": "walk",
+          "frames": 35,
+          "fps": 30.0
+        },
+        {
+          "name": "run",
+          "frames": 29,
+          "fps": 30.0
+        },
+        {
+          "name": "dieback",
+          "frames": 51,
+          "fps": 30.0
+        },
+        {
+          "name": "jump",
+          "frames": 31,
+          "fps": 30.0
+        }
+      ],
+      "bounds": [
+        [
+          -9.579969391257112,
+          -14.970382356184455,
+          -0.014625006861221479
+        ],
+        [
+          9.581299697683002,
+          10.934064899289712,
+          13.203528472903798
+        ]
+      ],
+      "bytes": 437200
+    },
+    "m4": {
+      "file": "m4.glb",
+      "source": "v_m4a1.mdl",
+      "sha256": "9248c63dd811d85a062c0d4cdae7213f19a500b4bc73d225c78fa1e61e664033",
+      "bones": 44,
+      "materials": 9,
+      "primitives": 12,
+      "animations": [
+        {
+          "name": "idle_unsil",
+          "frames": 9,
+          "fps": 16.0
+        },
+        {
+          "name": "shoot1_unsil",
+          "frames": 31,
+          "fps": 20.0
+        },
+        {
+          "name": "reload_unsil",
+          "frames": 114,
+          "fps": 37.0
+        },
+        {
+          "name": "draw_unsil",
+          "frames": 41,
+          "fps": 40.0
+        }
+      ],
+      "bounds": [
+        [
+          -5.006795981494671,
+          -36.463731749673926,
+          -1.358616715933023
+        ],
+        [
+          5.409106201066704,
+          -4.567274084550216,
+          7.6282240926978275
+        ]
+      ],
+      "bytes": 860884
+    },
+    "ak": {
+      "file": "ak.glb",
+      "source": "v_ak47.mdl",
+      "sha256": "6eb08a5e76210712ad787949e244fd57346b1836a7462f3a436976126e270fa3",
+      "bones": 42,
+      "materials": 11,
+      "primitives": 14,
+      "animations": [
+        {
+          "name": "idle1",
+          "frames": 17,
+          "fps": 30.0
+        },
+        {
+          "name": "reload",
+          "frames": 91,
+          "fps": 37.0
+        },
+        {
+          "name": "draw",
+          "frames": 31,
+          "fps": 30.0
+        },
+        {
+          "name": "shoot1",
+          "frames": 17,
+          "fps": 20.0
+        }
+      ],
+      "bounds": [
+        [
+          -5.006795981494671,
+          -35.773626755367886,
+          -1.846398934950357
+        ],
+        [
+          5.409106201066704,
+          -4.567274084550216,
+          6.9415422539570795
+        ]
+      ],
+      "bytes": 763268
+    },
+    "usp": {
+      "file": "usp.glb",
+      "source": "v_usp.mdl",
+      "sha256": "401b52af40a1026f5e5241911af4429da6f84291f755ba2e6013cc4246fd2bf0",
+      "bones": 45,
+      "materials": 7,
+      "primitives": 10,
+      "animations": [
+        {
+          "name": "idle_unsil",
+          "frames": 31,
+          "fps": 16.0
+        },
+        {
+          "name": "shoot1_unsil",
+          "frames": 31,
+          "fps": 30.0
+        },
+        {
+          "name": "reload_unsil",
+          "frames": 101,
+          "fps": 37.0
+        },
+        {
+          "name": "draw_unsil",
+          "frames": 49,
+          "fps": 48.0
+        }
+      ],
+      "bounds": [
+        [
+          -6.3899602022524435,
+          -27.343148970221065,
+          -9.193326188467713
+        ],
+        [
+          5.409106201066704,
+          -4.567274084550216,
+          6.174898258864349
+        ]
+      ],
+      "bytes": 840480
+    }
+  },
+  "sounds": {
+    "m4": "sounds/m4.wav",
+    "ak": "sounds/ak.wav",
+    "usp": "sounds/usp.wav",
+    "reload": "sounds/reload.wav",
+    "zombie1": "sounds/zombie1.wav",
+    "zombie2": "sounds/zombie2.wav",
+    "zombieAttack": "sounds/zombieAttack.wav",
+    "hurt": "sounds/hurt.wav"
+  },
+  "maps": [
+    {
+      "name": "as_oilrig",
+      "version": 30,
+      "bytes": 2056040,
+      "sha256": "132f48a1cac7aba9e48fae2db24e5d810223bf13ae3bacabca76aa8e39d1638f"
+    },
+    {
+      "name": "cs_747",
+      "version": 30,
+      "bytes": 1702788,
+      "sha256": "801123e4aeb460a72603d9cfca0358302ed5dcd2aa750e5b595b1a277ce3fd94"
+    },
+    {
+      "name": "cs_assault",
+      "version": 30,
+      "bytes": 1041700,
+      "sha256": "2457e165671e3830ec91471dea6f471440747cbb4b1fa1b6a85cddc30adb3648"
+    },
+    {
+      "name": "cs_backalley",
+      "version": 30,
+      "bytes": 2142344,
+      "sha256": "6416ecdf3c7e42c455a23747853fee1fd2ae46d0a8ae2b8429d4780cb7f446f5"
+    },
+    {
+      "name": "cs_estate",
+      "version": 30,
+      "bytes": 4485488,
+      "sha256": "f4d10fbeaba1f4cb80fa77d5ba38d93c287714136bdce005348fea2bd73be91d"
+    },
+    {
+      "name": "cs_havana",
+      "version": 30,
+      "bytes": 4988672,
+      "sha256": "20e1e2763f800b063bfbf7b39ce70216ba0c75fc6d1cbb6f2902f267cf0b126d"
+    },
+    {
+      "name": "cs_italy",
+      "version": 30,
+      "bytes": 2303480,
+      "sha256": "2a5a16044d69481a9fb3c623407fb0ba9d6b8863f30db35451992d2879c1ca9d"
+    },
+    {
+      "name": "cs_militia",
+      "version": 30,
+      "bytes": 2022676,
+      "sha256": "83dcce0e57c3da84c4a053668f096cc390c1a723610a46861bcfc2eaa84d7e66"
+    },
+    {
+      "name": "cs_office",
+      "version": 30,
+      "bytes": 4679872,
+      "sha256": "ea1ec1ccae772e26ab4e2a1472ef120fd09b5b4e9821a9cc364164d5997c737e"
+    },
+    {
+      "name": "cs_siege",
+      "version": 30,
+      "bytes": 3361120,
+      "sha256": "a8aaf4a1227b90521d8b8b1151c09bac0bffd7917db2339f12cb5edf430e2c50"
+    },
+    {
+      "name": "de_airstrip",
+      "version": 30,
+      "bytes": 7156240,
+      "sha256": "cbc6de2da0322a59922473517ac40b5422763c7aedfaef64bc67c4f583582a00"
+    },
+    {
+      "name": "de_aztec",
+      "version": 30,
+      "bytes": 2705772,
+      "sha256": "6a9c1c472ad01283098760314cb8744552e5f3a6493108ab5e19075216a3f9ed"
+    },
+    {
+      "name": "de_cbble",
+      "version": 30,
+      "bytes": 2260516,
+      "sha256": "8ca7f2c24566c641a02946ac53c0194551485c8c4bf6514fa35352fb1b4549ec"
+    },
+    {
+      "name": "de_chateau",
+      "version": 30,
+      "bytes": 4953700,
+      "sha256": "2c7988276c3087b52f4709890974b476a62f526955635dd935144e38d1666dce"
+    },
+    {
+      "name": "de_dust",
+      "version": 30,
+      "bytes": 1359684,
+      "sha256": "ac94fbda94e4a170b971f05936fe8706cb9aa895e55f7797916dc160171cab11"
+    },
+    {
+      "name": "de_dust2",
+      "version": 30,
+      "bytes": 2057288,
+      "sha256": "15945389528d113562ede0a2c80647ebfa799079ed1c05a25379bcf84e4e9286"
+    },
+    {
+      "name": "de_inferno",
+      "version": 30,
+      "bytes": 6269880,
+      "sha256": "d5dcf0aa4d36a0d446ed22e45b841ebc0b9e9d6c8d73b0151ba0d75afd908d5b"
+    },
+    {
+      "name": "de_mirage",
+      "version": 30,
+      "bytes": 4773592,
+      "sha256": "e6d7c8b1fca8d1a069102a5664ee641afa7564b17668b67de8775f58ed046df4"
+    },
+    {
+      "name": "de_nuke",
+      "version": 30,
+      "bytes": 2021352,
+      "sha256": "85e6386ffe33a25c2283100e36db7cb5e993cfa070924322339f48725360eeaa"
+    },
+    {
+      "name": "de_piranesi",
+      "version": 30,
+      "bytes": 3446068,
+      "sha256": "aa38fa746ecdee217cd047af4ced7ab09619951a5099aae6a20541db482f7f73"
+    },
+    {
+      "name": "de_prodigy",
+      "version": 30,
+      "bytes": 1929740,
+      "sha256": "b345bd3f97babab19e026ebb8ae46c9d1be2b7a7da0acc12dbf1816c8a4ced7e"
+    },
+    {
+      "name": "de_storm",
+      "version": 30,
+      "bytes": 2955604,
+      "sha256": "0835131e5460884eabecb80a7dba3ce4376576f7917d5c31fe3019634387d4b7"
+    },
+    {
+      "name": "de_survivor",
+      "version": 30,
+      "bytes": 6464260,
+      "sha256": "42ea494d6597fa77ec2d49ed08af91eddac534c4c5993f5ce945eb9918bcc3de"
+    },
+    {
+      "name": "de_torn",
+      "version": 30,
+      "bytes": 5466396,
+      "sha256": "9c9081d9382ad5341a68242db7974c84a41c0d04e508205161a1c09ca6dbad5b"
+    },
+    {
+      "name": "de_train",
+      "version": 30,
+      "bytes": 1145428,
+      "sha256": "690fc75d9c29a847aa453448800f5dee22d4c4e1652924923c5f7ab3dc5cfa70"
+    },
+    {
+      "name": "de_tuscan",
+      "version": 30,
+      "bytes": 5317220,
+      "sha256": "fb33851413846309c97ea5e42e960fbe19dda24a85babe2e080dd0d00c78d2ff"
+    },
+    {
+      "name": "de_vertigo",
+      "version": 30,
+      "bytes": 1733800,
+      "sha256": "b52f521b33a58cf8af02da35ed37d0c746b57151e2b373628f260201ad8d0a95"
+    }
+  ],
+  "source_files": {
+    "cstrike": 1917,
+    "valve": 3942
+  },
+  "world": {
+    "faces": 4002,
+    "materials": 34,
+    "geometry": "dust2.glb",
+    "lightmap": "dust2-lightmap.png",
+    "name": "DUST II",
+    "code": "de_dust2",
+    "collision": "dust2.json",
+    "navigationNodes": 24182,
+    "sky": {
+      "rt": "sky/desrt.png",
+      "lf": "sky/deslf.png",
+      "up": "sky/desup.png",
+      "dn": "sky/desdn.png",
+      "bk": "sky/desbk.png",
+      "ft": "sky/desft.png"
+    }
+  }
+}
