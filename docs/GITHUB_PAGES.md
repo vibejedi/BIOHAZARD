@@ -1,7 +1,7 @@
 # Play online with GitHub Pages
 
 The `main` branch contains the source. The `gh-pages` branch contains the complete
-static browser game, including Dust II, three Half-Life campaign maps, models, textures, sounds,
+static browser game, including Dust II, five Half-Life campaign maps, models, textures, sounds,
 and fonts. The original installer, extracted game folders,
 native libraries, and development dependencies are excluded.
 
@@ -41,3 +41,7 @@ The prepared media is retained in this cloud environment, rather than in `main`.
 A fresh source-only clone needs the supplied game data converted first; see the
 asset preparation instructions in the project README. A source-only build cannot enter gameplay without the required original media
 and is intentionally rejected by this publisher.
+
+GitHub Pages hosts the client and campaign. The separate multiplayer match service
+needs a VPS and TLS endpoint; see [deployment](MULTIPLAYER.md). The client accepts
+the endpoint in its multiplayer menu or via `VITE_MULTIPLAYER_URL` at build time.

@@ -8,7 +8,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 // Only prepared media can be served. Never expose the installer or native code.
 function localGameAssets(standalone = false) {
   const root = fileURLToPath(new URL('./game-assets/ready/', import.meta.url));
-  const allowed = /^(manifest\.json|(?:zombie|headcrab|m4|ak|usp|dust2|c1a0|c1a1|c1a2)\.glb|(?:dust2|c1a0|c1a1|c1a2)\.json|(?:dust2|c1a0|c1a1|c1a2)-lightmap\.png|sky\/(?:des|(?:c1a0|c1a1|c1a2)-)(?:rt|lf|up|dn|bk|ft)\.png|sounds\/(?:m4|ak|usp|reload|zombie1|zombie2|zombieAttack|hurt|crabIdle|crabAttack)\.wav)$/;
+  const allowed = /^(manifest\.json|(?:zombie|headcrab|m4|ak|usp|deagle|mp5|p90|m249|crate|player|dust2|c1a0|c1a1|c1a2|c1a3|c1a4)\.glb|(?:dust2|c1a0|c1a1|c1a2|c1a3|c1a4)\.json|(?:dust2|c1a0|c1a1|c1a2|c1a3|c1a4)-lightmap\.png|sky\/(?:des|(?:c1a0|c1a1|c1a2|c1a3|c1a4)-)(?:rt|lf|up|dn|bk|ft)\.png|sounds\/(?:m4|ak|usp|reload|zombie1|zombie2|zombieAttack|hurt|crabIdle|crabAttack|deagle|mp5|p90|m249)\.wav)$/;
   const mime = name => name.endsWith('.glb') ? 'model/gltf-binary' : name.endsWith('.wav') ? 'audio/wav' : name.endsWith('.png') ? 'image/png' : 'application/json';
   const prepared = async () => {
     try {

@@ -1,0 +1,27 @@
+services:
+  game:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    environment:
+      ALLOWED_ORIGINS: https://vibejedi.github.io
+    restart: unless-stopped
+    init: true
+    mem_limit: 1g
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      GAME_HOST: ${GAME_HOST:?Set GAME_HOST in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - game
+volumes:
+  caddy_data:
+  caddy_config:

@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MapCollision, NavigationGraph } from './bsp-navigation.js';
 import { mediaURL, mediaJSON } from './media.js';
+import { supplyPosition } from './supplies.js';
 
-export async function loadBspWorld(description) {
+export async function loadBspWorld(description, assets) {
   const [model, data, lightmap] = await Promise.all([
     new GLTFLoader().loadAsync(mediaURL(description.geometry)),
     mediaJSON(description.collision),
@@ -29,17 +30,16 @@ export async function loadBspWorld(description) {
     scene.backgroundIntensity = 0.12;
   }
   const playerSpawn = new THREE.Vector3(...data.playerSpawn);
-  const supplyCandidates = data.nodes.filter(p => Math.hypot(p[0] - playerSpawn.x, p[2] - playerSpawn.z) > 2.3 && Math.hypot(p[0] - playerSpawn.x, p[2] - playerSpawn.z) < 3.3 && Math.abs(p[1] - playerSpawn.y) < 0.5);
-  const supplies = new THREE.Vector3(...(supplyCandidates[0] || data.playerSpawn));
-  const crate = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.7), new THREE.MeshStandardMaterial({ color: 0x3d6245, roughness: 0.8 }));
-  crate.position.copy(supplies); crate.position.y += 0.4; scene.add(crate); walls.push(crate);
+  const supplies = new THREE.Vector3(...supplyPosition(data));
+  const crate = assets.createCrate(); crate.position.copy(supplies); scene.add(crate);
+  crate.traverse(object => { if (object.isMesh) walls.push(object); });
   const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
   const ctx = canvas.getContext('2d'); ctx.fillStyle = '#263e2d'; ctx.fillRect(0, 0, 512, 128); ctx.fillStyle = '#e5e5c7'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('+ FIELD SUPPLIES', 256, 78);
   const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: true, transparent: true, opacity: 0.9 })); label.position.copy(supplies); label.position.y += 1.3; label.scale.set(1.5, 0.3, 1); label.visible = false; scene.add(label);
   const world = {
     id: description.id || 'dust2', name: description.name, code: description.code.toUpperCase(), eyeHeight: 2,
-    scene, collision, navigation, walls, dust: [], obstacles: [], supplies, playerSpawn, playerYaw: data.playerYaw,
+    scene, collision, navigation, walls, dust: [], obstacles: [], supplies, crate, playerSpawn, playerYaw: data.playerYaw,
     spawns: data.spawns.map(p => new THREE.Vector3(...p)),
     move: (position, dx, dz, ground) => collision.move(position, dx, dz, ground),
     findPath: (start, goal) => navigation.path(start, goal),

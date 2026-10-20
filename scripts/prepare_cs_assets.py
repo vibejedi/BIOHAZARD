@@ -289,6 +289,12 @@ def prepare(root, output):
         'm4': ('cstrike/models/v_m4a1.mdl', ['idle_unsil', 'shoot1_unsil', 'reload_unsil', 'draw_unsil']),
         'ak': ('cstrike/models/v_ak47.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
         'usp': ('cstrike/models/v_usp.mdl', ['idle_unsil', 'shoot1_unsil', 'reload_unsil', 'draw_unsil']),
+        'deagle': ('cstrike/models/v_deagle.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
+        'mp5': ('cstrike/models/v_mp5.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
+        'p90': ('cstrike/models/v_p90.mdl', ['idle', 'shoot1', 'reload', 'draw']),
+        'm249': ('cstrike/models/v_m249.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
+        'crate': ('valve/models/mil_crate.mdl', ['idle1']),
+        'player': ('cstrike/models/player/leet/leet.mdl', ['idle1', 'walk', 'run', 'death1']),
     }
     report = {'format': 1, 'models': {}, 'sounds': {}, 'maps': []}
     for name, (relative, sequences) in definitions.items():
@@ -301,6 +307,8 @@ def prepare(root, output):
         'zombie1': 'valve/sound/zombie/zo_idle1.wav', 'zombie2': 'valve/sound/zombie/zo_idle2.wav',
         'zombieAttack': 'valve/sound/zombie/zo_attack1.wav', 'hurt': 'valve/sound/player/pl_pain2.wav',
         'crabIdle': 'valve/sound/headcrab/hc_idle1.wav', 'crabAttack': 'valve/sound/headcrab/hc_attack1.wav',
+        'deagle': 'cstrike/sound/weapons/deagle-1.wav', 'mp5': 'cstrike/sound/weapons/mp5-1.wav',
+        'p90': 'cstrike/sound/weapons/p90-1.wav', 'm249': 'cstrike/sound/weapons/m249-1.wav',
     }
     (output/'sounds').mkdir(exist_ok=True)
     for name, relative in sound_paths.items():
@@ -321,7 +329,8 @@ def prepare(root, output):
     from prepare_bsp_map import convert_map
     report['world'] = convert_map(root, output)
     report['campaignWorlds'] = [convert_map(root, output, f'valve/maps/{map_id}.bsp', map_id, name) for map_id, name in [
-        ('c1a0', 'ANOMALOUS MATERIALS'), ('c1a1', 'UNFORESEEN CONSEQUENCES'), ('c1a2', 'OFFICE COMPLEX')]]
+        ('c1a0', 'ANOMALOUS MATERIALS'), ('c1a1', 'UNFORESEEN CONSEQUENCES'), ('c1a2', 'OFFICE COMPLEX'),
+        ('c1a3', "WE'VE GOT HOSTILES"), ('c1a4', 'BLAST PIT')]]
     (output/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     return report
 

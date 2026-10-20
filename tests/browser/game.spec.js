@@ -13,8 +13,8 @@ test('loadout, manual, settings, and desktop layout work', async ({ page }) => {
   await page.getByRole('button', { name: /FIELD MANUAL/ }).click();
   await expect(page.locator('#manual-dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Close field manual' }).click();
-  await page.locator('[data-weapon="ak"]').click();
-  await expect(page.locator('[data-weapon="ak"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#map-select')).toHaveValue('hl-campaign');
+  await expect(page.locator('.progression-strip')).toContainText('USP');
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.locator('#sensitivity').fill('1.6');
   await expect(page.locator('#sensitivity-value')).toHaveText('1.6');
@@ -29,6 +29,7 @@ test('loadout, manual, settings, and desktop layout work', async ({ page }) => {
 
 test('movement, real raycast combat, reload, resupply, pause, and defeat', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
+  await page.locator('#map-select').selectOption('dust2');
   await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();
   await page.evaluate(() => { window.__biohazard.nextWaveTimer = 999; });
@@ -41,17 +42,21 @@ test('movement, real raycast combat, reload, resupply, pause, and defeat', async
   await page.mouse.down();
   await page.mouse.up();
   await expect.poll(() => page.evaluate(() => window.__biohazard.kills)).toBe(1);
-  await expect(page.locator('#ammo')).toHaveText('29');
+  await expect(page.locator('#ammo')).toHaveText('11');
   await page.keyboard.press('KeyR');
   await expect(page.locator('#reload-indicator')).toBeVisible();
-  await expect(page.locator('#ammo')).toHaveText('30', { timeout: 15000 });
-  await expect(page.locator('#reserve')).toHaveText('179');
+  await expect(page.locator('#ammo')).toHaveText('12', { timeout: 15000 });
+  await expect(page.locator('#reserve')).toHaveText('35');
   await page.keyboard.press('Digit2');
   await expect(page.locator('#weapon-name')).toHaveText('USP SIDEARM');
   await page.evaluate(() => { const g = window.__biohazard; g.groundY = g.world.supplies.y; g.camera.position.copy(g.world.supplies); g.camera.position.y += g.eyeHeight; g.cash = 600; g.health = 20; });
   await page.keyboard.press('KeyE');
+  await expect(page.locator('#armory-dialog')).toBeVisible();
+  await page.locator('#buy-health').click();
+  await page.locator('#buy-ammo').click();
+  await page.getByRole('button', { name: 'Close supply crate' }).click();
   await expect(page.locator('#health')).toHaveText('100');
-  await expect(page.locator('#cash')).toHaveText('100 CR');
+  await expect(page.locator('#cash')).toHaveText('$100');
   await page.keyboard.press('KeyP');
   await expect(page.locator('#pause-screen')).toBeVisible();
   await page.locator('#resume').click();
@@ -65,6 +70,7 @@ test('movement, real raycast combat, reload, resupply, pause, and defeat', async
 });
 
 test('zombies pursue the player and the final cleared wave wins', async ({ page }) => {
+  await page.locator('#map-select').selectOption('dust2');
   await page.locator('#deploy').click();
   await page.evaluate(() => { const g = window.__biohazard; g.nextWaveTimer = 999; g.spawnEnemy(); });
   const initial = await page.evaluate(() => window.__biohazard.enemies[0].group.position.toArray());
@@ -86,7 +92,7 @@ test('mobile layout and touch actions remain usable', async ({ browser }) => {
   await expect(page.locator('#joystick')).toBeVisible();
   await page.evaluate(() => { window.__biohazard.nextWaveTimer = 999; });
   await page.locator('#touch-fire').tap();
-  await expect(page.locator('#ammo')).toHaveText('29');
+  await expect(page.locator('#ammo')).toHaveText('11');
   await page.locator('#touch-switch').tap();
   await expect(page.locator('#weapon-name')).toHaveText('USP SIDEARM');
   await page.locator('#flashlight-toggle').tap();

@@ -5,13 +5,14 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#map-select').selectOption('dust2');
   await page.locator('#deploy').click();
 });
 
 test('original animated head hitboxes give one-shot kills; body shots take three or four hits', async ({ page }) => {
   await page.evaluate(() => { const g = window.__biohazard; g.renderer.setAnimationLoop(null); g.nextWaveTimer = 999; });
-  for (const id of ['m4', 'ak', 'usp']) {
-    await page.evaluate(id => { const g = window.__biohazard; g.switchWeapon(id); g.ammunition[id].ammo = 30; g.score = 0; g.kills = 0; g.headshots = 0; }, id);
+  for (const id of ['usp', 'deagle', 'mp5', 'p90', 'm4', 'ak', 'm249']) {
+    await page.evaluate(id => { const g = window.__biohazard; if (!g.ownedWeapons.includes(id)) g.ownedWeapons.push(id); g.switchWeapon(id); g.ammunition[id].ammo = 100; g.score = 0; g.kills = 0; g.headshots = 0; }, id);
     for (const clip of ['walk', 'attack1']) {
       await page.evaluate(placeTarget, { part: 'head', clip, phase: 0.65 });
       const result = await page.evaluate(() => {
@@ -23,9 +24,9 @@ test('original animated head hitboxes give one-shot kills; body shots take three
       await expect(page.locator('#hit-feedback')).toContainText('HEADSHOT');
     }
     expect(await page.evaluate(() => window.__biohazard.headshots)).toBe(2);
-    expect(await page.evaluate(() => window.__biohazard.score)).toBe(550);
+    expect(await page.evaluate(() => window.__biohazard.score)).toBe(0);
     await page.evaluate(placeTarget, { part: 'body' });
-    const expectedShots = id === 'ak' ? 3 : 4;
+    const expectedShots = ['ak', 'deagle', 'm249'].includes(id) ? 3 : 4;
     for (let shot = 1; shot <= expectedShots; shot++) {
       await page.evaluate(aimTarget, 'body');
       const dead = await page.evaluate(() => { const g = window.__biohazard; g.shootTimer = 0; g.shoot(); return g.testTarget.dead; });
@@ -38,8 +39,8 @@ test('original animated head hitboxes give one-shot kills; body shots take three
 
 test('muzzle flashes and blood render visible pixels, and flashes survive a slow frame', async ({ page }) => {
   await page.evaluate(() => { const g = window.__biohazard; g.renderer.setAnimationLoop(null); g.nextWaveTimer = 999; });
-  for (const id of ['m4', 'ak', 'usp']) {
-    await page.evaluate(id => { const g = window.__biohazard; g.switchWeapon(id); g.ammunition[id].ammo = 30; }, id);
+  for (const id of ['usp', 'deagle', 'mp5', 'p90', 'm4', 'ak', 'm249']) {
+    await page.evaluate(id => { const g = window.__biohazard; if (!g.ownedWeapons.includes(id)) g.ownedWeapons.push(id); g.switchWeapon(id); g.ammunition[id].ammo = 100; }, id);
     await page.evaluate(placeTarget, { part: 'body' });
     const result = await page.evaluate(() => {
       const g = window.__biohazard, view = g.weapons[g.weaponId], renderer = g.renderer;

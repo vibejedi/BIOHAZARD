@@ -1,0 +1,3 @@
+{$GAME_HOST} {
+  reverse_proxy game:8080
+}

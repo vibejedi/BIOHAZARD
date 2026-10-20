@@ -5,14 +5,17 @@ export const DIFFICULTIES = {
 };
 
 export const WEAPONS = {
-  m4: { name: 'M4 CARBINE', short: 'M4', caliber: '5.56 × 45 MM', capacity: 30, reserve: 180, damage: 29, interval: 0.105, reload: 2.1, recoil: 0.017, automatic: true },
-  ak: { name: 'AK RIFLE', short: 'AK', caliber: '7.62 × 39 MM', capacity: 30, reserve: 150, damage: 35, interval: 0.145, reload: 2.5, recoil: 0.027, automatic: true },
-  usp: { name: 'USP SIDEARM', short: 'USP', caliber: '.45 ACP', capacity: 12, reserve: 96, damage: 27, interval: 0.28, reload: 1.5, recoil: 0.023, automatic: false },
+  usp: { name: 'USP SIDEARM', short: 'USP', tier: 0, price: 0, ammoPrice: 150, caliber: '.45 ACP', capacity: 12, reserve: 72, damage: 27, interval: 0.28, reload: 1.5, recoil: 0.023, automatic: false, idle: 'idle_unsil', shoot: 'shoot1_unsil', reloadClip: 'reload_unsil', muzzle: 2 },
+  deagle: { name: 'DESERT EAGLE', short: 'DEAGLE', tier: 0, price: 650, ammoPrice: 170, caliber: '.50 AE', capacity: 7, reserve: 35, damage: 40, interval: 0.3, reload: 1.9, recoil: 0.045, automatic: false, idle: 'idle1', shoot: 'shoot1', reloadClip: 'reload', muzzle: 0 },
+  mp5: { name: 'MP5 NAVY', short: 'MP5', tier: 1, price: 1500, ammoPrice: 200, caliber: '9 × 19 MM', capacity: 30, reserve: 90, damage: 26, interval: 0.085, reload: 2.2, recoil: 0.014, automatic: true, idle: 'idle1', shoot: 'shoot1', reloadClip: 'reload', muzzle: 0 },
+  p90: { name: 'P90', short: 'P90', tier: 1, price: 2350, ammoPrice: 250, caliber: '5.7 × 28 MM', capacity: 50, reserve: 150, damage: 27, interval: 0.07, reload: 2.8, recoil: 0.017, automatic: true, idle: 'idle', shoot: 'shoot1', reloadClip: 'reload', muzzle: 0 },
+  m4: { name: 'M4 CARBINE', short: 'M4', tier: 2, price: 3300, ammoPrice: 300, caliber: '5.56 × 45 MM', capacity: 30, reserve: 90, damage: 29, interval: 0.105, reload: 2.1, recoil: 0.017, automatic: true, idle: 'idle_unsil', shoot: 'shoot1_unsil', reloadClip: 'reload_unsil', muzzle: 2 },
+  ak: { name: 'AK RIFLE', short: 'AK', tier: 2, price: 3100, ammoPrice: 300, caliber: '7.62 × 39 MM', capacity: 30, reserve: 90, damage: 35, interval: 0.145, reload: 2.5, recoil: 0.027, automatic: true, idle: 'idle1', shoot: 'shoot1', reloadClip: 'reload', muzzle: 0 },
+  m249: { name: 'M249 HEAVY', short: 'M249', tier: 3, price: 5750, ammoPrice: 550, caliber: '5.56 × 45 MM', capacity: 100, reserve: 200, damage: 42, interval: 0.075, reload: 4.2, recoil: 0.035, automatic: true, idle: 'idle1', shoot: 'shoot1', reloadClip: 'reload', muzzle: 0 },
 };
 
 export const ZOMBIE_HEALTH = 100;
 export const shotDamage = (weapon, headshot) => WEAPONS[weapon].damage * (headshot ? 4 : 1);
-export const killPoints = headshot => headshot ? 250 : 100;
 
 export function enemyKind(wave, index) {
   if (wave >= 2 && index % 5 === 4) return 'headcrab';

@@ -4,11 +4,11 @@ import fs from 'node:fs';
 import { COURSES, courseWaves, courseKills, stageEndWave } from '../src/campaign.js';
 import { MapCollision, NavigationGraph } from '../src/bsp-navigation.js';
 
-test('the Half-Life campaign has three original story maps and three waves per chapter', () => {
-  assert.deepEqual(COURSES['hl-campaign'].stages.map(stage => stage.map), ['c1a0', 'c1a1', 'c1a2']);
+test('the Half-Life campaign has five original story maps and three waves per chapter', () => {
+  assert.deepEqual(COURSES['hl-campaign'].stages.map(stage => stage.map), ['c1a0', 'c1a1', 'c1a2', 'c1a3', 'c1a4']);
   assert.equal(courseWaves('dust2'), 5); assert.equal(courseKills('dust2'), 50);
-  assert.equal(courseWaves('hl-campaign'), 9); assert.equal(courseKills('hl-campaign'), 126);
-  assert.deepEqual([0, 1, 2].map(index => stageEndWave('hl-campaign', index)), [3, 6, 9]);
+  assert.equal(courseWaves('hl-campaign'), 15); assert.equal(courseKills('hl-campaign'), 300);
+  assert.deepEqual([0, 1, 2, 3, 4].map(index => stageEndWave('hl-campaign', index)), [3, 6, 9, 12, 15]);
 });
 
 for (const { map } of COURSES['hl-campaign'].stages) {

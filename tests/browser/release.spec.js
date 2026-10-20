@@ -32,7 +32,7 @@ test('the hosted production folder runs under a subdirectory on a plain static s
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto(address.replace('/BIOHAZARD.html', '/hosted/index.html?test=1'));
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
-  expect(await page.evaluate(() => ({ map: window.__biohazard.world.id, embedded: Boolean(globalThis.__BIOHAZARD_MEDIA__) }))).toEqual({ map: 'dust2', embedded: false });
+  expect(await page.evaluate(() => ({ map: window.__biohazard.world.id, embedded: Boolean(globalThis.__BIOHAZARD_MEDIA__) }))).toEqual({ map: 'c1a0', embedded: false });
   await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();
   await page.keyboard.press('Digit2');
@@ -48,7 +48,8 @@ test('standalone Dust2 game loads with no asset server and supports movement, co
   await page.addInitScript(() => { try { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); } catch { /* Storage can be unavailable. */ } });
   await page.goto(`${address}?test=1`);
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
-  expect(await page.evaluate(() => window.__biohazard.world.id)).toBe('dust2');
+  expect(await page.evaluate(() => window.__biohazard.world.id)).toBe('c1a0');
+  await page.locator('#map-select').selectOption('dust2');
   expect(network).toEqual([`${address}?test=1`]);
   await page.context().setOffline(true);
   await page.locator('#deploy').click();
@@ -65,9 +66,9 @@ test('standalone Dust2 game loads with no asset server and supports movement, co
   await page.screenshot({ path: 'test-results/dust2-browser-game.png' });
   await page.mouse.down(); await page.mouse.up();
   await expect.poll(() => page.evaluate(() => window.__biohazard.kills)).toBe(1);
-  await expect(page.locator('#ammo')).toHaveText('29');
+  await expect(page.locator('#ammo')).toHaveText('11');
   await page.keyboard.press('KeyR');
-  await expect(page.locator('#ammo')).toHaveText('30', { timeout: 15000 });
+  await expect(page.locator('#ammo')).toHaveText('12', { timeout: 15000 });
   await page.evaluate(() => { const g = window.__biohazard; g.spawnEnemy(); });
   const origin = await page.evaluate(() => window.__biohazard.enemies[0].group.position.toArray());
   await expect.poll(() => page.evaluate(initial => {
@@ -90,11 +91,11 @@ test('the single HTML also initializes and plays with an opaque origin and netwo
   page.on('request', req => { if (req.url().startsWith('http')) requests.push(req.url()); });
   await page.setContent(html.toString(), { waitUntil: 'load', timeout: 60000 });
   await expect(page.locator('#asset-status')).toContainText('HALF-LIFE ZOMBIES', { timeout: 30000 });
-  await expect(page.locator('#map-select')).toHaveValue('dust2');
+  await expect(page.locator('#map-select')).toHaveValue('hl-campaign');
   await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();
   await page.mouse.down(); await page.mouse.up();
-  await expect(page.locator('#ammo')).toHaveText('29');
+  await expect(page.locator('#ammo')).toHaveText('11');
   expect(requests).toEqual([]); expect(errors).toEqual([]);
   await context.close();
 });

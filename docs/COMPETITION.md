@@ -1,49 +1,68 @@
-# Timed competition foundation
+# Campaign economy and score rules
 
-The current release awards in-game points and records completed survival and
-campaign times on the player's device. This is the user's selected first phase.
-There is no payment integration or shared leaderboard yet. GitHub Pages serves
-static files and cannot securely verify scores or send payouts.
+Campaign runs start with a USP (12 loaded / 36 reserve) and $600 field cash.
+A body kill earns $100, a headshot kill $150, and every completed wave $300.
+Cash purchases weapons, ammunition or health at the original military crate;
+it never contributes directly to score and has no real-world value.
 
-## Current scoring
+There are five chapters, three waves each: c1a0, c1a1, c1a2, c1a3, c1a4.
+Weapons, bullets, health and money persist between all 15 waves and chapters.
+Nothing automatically refills. E opens the crate within 3.5 metres on the same
+floor; enemies and the combat clock continue while shopping.
 
-Normal zombies and runners have 100 health. M4 body damage is 29, AK is 35, and
-USP is 27; headshots multiply damage by four. This makes headshots one-shot kills
-and normal body kills three or four shots at every wave and difficulty.
-Headcrabs have 50 health, no headshot region, and take two body shots.
+| Weapon | Unlock wave | Price | Ammo refill |
+| --- | ---: | ---: | ---: |
+| USP | 1 | Starts owned | $150 |
+| Desert Eagle | 1 | $650 | $170 |
+| MP5 | 4 | $1,500 | $200 |
+| P90 | 4 | $2,350 | $250 |
+| AK-47 | 7 | $3,100 | $300 |
+| M4A1 | 7 | $3,300 | $300 |
+| M249 | 13 | $5,750 | $550 |
 
-Body hits award 5 points and body kills another 100. Head hits award 25 and head
-kills another 250. Supply credits are a separate consumable resource, have no
-cash value, and never reduce the points used for timed records.
+New purchases include one full magazine and two magazines in reserve. Ammo
+purchases refill only the selected owned gun to its configured full load.
+Health costs $350 and restores the selected difficulty's maximum health.
+Switching guns creates no ammunition. Dust II training compresses tier unlocks
+to waves 2, 3 and 5 of its five-wave course.
 
-Time starts when the operation begins and includes pauses, intermissions, and
-chapter changes. Completed runs rank by milliseconds ascending, then score and
-headshots descending. Records are separated by course, difficulty, and rule
-version. Dust II requires all 5 waves / 50 kills; Black Mesa Lockdown requires all
-9 waves / 126 kills. Wave splits are saved with the run.
+Normal zombies/runners have 100 health. Pistols/SMGs/rifles/heavy weapons need
+3–4 body hits; head damage is multiplied by four, killing in one headshot.
+Headcrabs have 50 health, take two body hits, and have no headshot region.
 
-The storage validator rejects malformed or incomplete records; this does not
-make browser results tamper-proof. Players control JavaScript, browser storage,
-and their local clock. The opt-in integration-test hook is absent in ordinary
-play, but removing that hook does not make client-authoritative play secure.
+## Per-wave scoring
 
-## Shared standings and prizes later
+Each completed wave adds four components:
 
-A deployed service and database are needed before cross-player contests:
+- Headshots: 100 points per headshot kill.
+- Speed: 1,000 × target time / (target time + combat time), rounded. Target time is
+  15 seconds plus 0.8 seconds per enemy in the wave.
+- Survival: max(0, 1,000 − 10 × actual health damage received).
+- Accuracy: 1,000 × hits / shots, rounded; zero if no shots were fired.
 
-1. Authenticate the player, issue a unique run/session with a server start time,
-   versioned rules, course, difficulty, and a reproducible spawn seed.
-2. Make the server authoritative over enemy state, damage, wave progression,
-   ammunition, and completion. Accept player inputs rather than a claimed final
-   score. For an asynchronous design, validate a deterministic input replay
-   against the issued seed and reject impossible/missing events.
-3. Finalize each run once; rank only verified completions in a time-bounded
-   competition. Separate courses/difficulties and record the rule version.
-4. Define the prize currency, funding source, eligible players, tie rules,
-   competition closing time, and dispute process before enabling real prizes.
-5. Use a server-side payment provider or wallet service, an auditable ledger,
-   idempotent settlement, and server-held credentials. Never send money based on
-   a browser-submitted rank or put payout secrets in the Pages build.
+The wave summary and final table show time, headshots, accuracy, damage and
+points. Combat time includes pauses/shopping during the active wave, and excludes
+intermissions. The overall timer includes the whole run, including intermissions
+and chapter transitions. Black Mesa requires all 15 waves / 300 kills; Dust II
+requires 5 / 50. Records rank total score first, then overall time, then headshots.
+They are separated by course, difficulty and rule version. Previous score rules
+are excluded. Only completed runs enter local records.
 
-The current client does not label local standings as global, verified, or
-cash-winning. No prize balances or payment accounts are simulated.
+These are local practice standings. The storage validator rejects malformed or
+incomplete records, but players control JavaScript, storage and local clocks.
+Campaign records are not server verified or shared. There are no wallets, entry
+fees, payment integrations or cash prizes.
+
+## Online mode and future contests
+
+The separate PvP deathmatch server verifies positions, bullets, hits, reloads,
+purchases and match results. See [multiplayer deployment](MULTIPLAYER.md) for
+queue rules and the USA West VPS setup. It does not verify campaign runs or
+provide persistent account rankings.
+
+Shared campaign competitions would require authenticated sessions, authoritative
+simulation or validated deterministic input replays, a database, versioned rules
+and finalized results. Real prizes additionally require defined eligibility,
+funding, tie rules, an auditable ledger and server-side payment integration.
+Neither browser-submitted scores nor the current guest PvP service are a basis
+for real-money payouts.

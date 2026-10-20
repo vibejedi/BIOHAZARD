@@ -1,6 +1,7 @@
 import { COURSES, courseKills, courseWaves } from './campaign.js';
-export const RUN_RULES = 'original-maps-headshots-v1';
-const STORAGE_KEY = 'bh-speed-runs-v1';
+import { scoreWave } from './scoring.js';
+export const RUN_RULES = 'campaign-economy-score-v2';
+const STORAGE_KEY = 'bh-campaign-runs-v2';
 
 export function formatRunTime(ms) {
   const centiseconds = Math.floor(Math.max(0, ms) / 10);
@@ -8,7 +9,7 @@ export function formatRunTime(ms) {
 }
 
 export function compareRuns(a, b) {
-  return a.elapsedMs - b.elapsedMs || b.score - a.score || b.headshots - a.headshots;
+  return b.score - a.score || a.elapsedMs - b.elapsedMs || b.headshots - a.headshots;
 }
 
 function validRun(run) {
@@ -17,7 +18,11 @@ function validRun(run) {
     && Number.isSafeInteger(run.score) && run.score >= 0
     && Number.isSafeInteger(run.headshots) && run.headshots >= 0 && run.headshots <= run.kills
     && run.kills === courseKills(run.map) && Array.isArray(run.splits) && run.splits.length === courseWaves(run.map)
-    && run.splits.every((split, index) => split.wave === index + 1 && Number.isSafeInteger(split.elapsedMs) && split.elapsedMs > 0 && split.elapsedMs <= run.elapsedMs && (!index || split.elapsedMs >= run.splits[index - 1].elapsedMs));
+    && run.splits.every((split, index) => split && split.wave === index + 1 && Number.isSafeInteger(split.elapsedMs) && split.elapsedMs > 0 && split.elapsedMs <= run.elapsedMs && (!index || split.elapsedMs >= run.splits[index - 1].elapsedMs)
+      && ['headshots', 'shots', 'hits', 'damageTaken', 'combatMs', 'points'].every(key => Number.isSafeInteger(split[key]) && split[key] >= 0)
+      && split.combatMs > 0 && split.headshots <= split.hits && split.hits <= split.shots && split.points === scoreWave(split).points)
+    && run.score === run.splits.reduce((sum, split) => sum + split.points, 0)
+    && run.headshots === run.splits.reduce((sum, split) => sum + split.headshots, 0);
 }
 
 export function readRuns(storage) {

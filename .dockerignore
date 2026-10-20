@@ -1,0 +1,11 @@
+.git
+node_modules
+game-assets
+attachments
+dist
+releases
+test-results
+playwright-report
+.env
+**/.env
+**/__pycache__

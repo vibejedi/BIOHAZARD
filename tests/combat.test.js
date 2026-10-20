@@ -2,14 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { installHitboxes } from '../src/classic-assets.js';
-import { ZOMBIE_HEALTH, WEAPONS, shotDamage, killPoints, enemyKind } from '../src/rules.js';
+import { ZOMBIE_HEALTH, WEAPONS, shotDamage, enemyKind } from '../src/rules.js';
 
-test('body shots take 3–4 hits, and headshots kill in one with higher points', () => {
+test('body shots take 3–4 hits, and headshots kill in one', () => {
   for (const id of Object.keys(WEAPONS)) {
     const bodyShots = Math.ceil(ZOMBIE_HEALTH / shotDamage(id, false));
     assert.ok(bodyShots >= 3 && bodyShots <= 4, id);
     assert.ok(shotDamage(id, true) >= ZOMBIE_HEALTH, id);
-    assert.ok(killPoints(true) + 25 > killPoints(false) + bodyShots * 5, id);
   }
 });
 

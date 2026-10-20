@@ -6,3 +6,6 @@ playwright-report/
 game-assets/
 __pycache__/
 releases/
+server-data/
+.env
+**/.env

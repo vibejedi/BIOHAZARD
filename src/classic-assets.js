@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { mediaURL, mediaJSON } from './media.js';
+import { WEAPONS } from './rules.js';
 
 export function animator(scene, clips, idle) {
   const mixer = new THREE.AnimationMixer(scene), actions = new Map(clips.map(clip => [clip.name, mixer.clipAction(clip)]));
@@ -50,7 +51,7 @@ export async function loadClassicAssets() {
   if (!status.available) return null;
   const manifest = await mediaJSON('manifest.json');
   const loader = new GLTFLoader();
-  const names = ['zombie', 'headcrab', 'm4', 'ak', 'usp'];
+  const names = ['zombie', 'headcrab', 'crate', 'player', ...Object.keys(WEAPONS)];
   const loaded = await Promise.all(names.map(name => loader.loadAsync(mediaURL(`${name}.glb`))));
   const templates = Object.fromEntries(names.map((name, index) => [name, loaded[index]]));
   for (const template of loaded) template.scene.traverse(object => {
@@ -62,6 +63,20 @@ export async function loadClassicAssets() {
   });
   return {
     manifest,
+    createCrate() {
+      const model = clone(templates.crate.scene), group = new THREE.Group();
+      const animation = animator(model, templates.crate.animations, 'idle1'); animation.update(0); model.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+      const scale = 1.15 / Math.max(size.x, size.z);
+      model.scale.setScalar(scale); model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+      group.add(model); group.userData.originalCrate = true;
+      return group;
+    },
+    createPlayer() {
+      const model = clone(templates.player.scene), group = new THREE.Group(); model.rotation.y = -Math.PI / 2; group.add(model);
+      const animation = animator(model, templates.player.animations, 'idle1'); animation.update(0);
+      return { group, animation, hits: installHitboxes(model, manifest.models.player.hitboxes), classic: true };
+    },
     createZombie() {
       const template = templates.zombie, model = clone(template.scene), group = new THREE.Group();
       model.rotation.y = -Math.PI / 2; group.add(model);
@@ -93,17 +108,17 @@ export async function loadClassicAssets() {
       let bones;
       model.traverse(object => { if (object.isSkinnedMesh && !bones) bones = object.skeleton.bones; });
       // Original unsilenced muzzle attachments follow the animated barrel.
-      const attachment = manifest.models[id].attachments?.[id === 'ak' ? 0 : 2];
+      const attachment = manifest.models[id].attachments?.[WEAPONS[id].muzzle];
       if (!attachment || !bones?.[attachment.bone]) throw new Error(`Missing muzzle attachment for ${id}.`);
       bones[attachment.bone].add(weapon.flash, weapon.light);
       weapon.flash.position.set(...attachment.position); weapon.light.position.copy(weapon.flash.position);
-      weapon.flash.scale.setScalar(id === 'usp' ? 0.14 : 0.22);
+      weapon.flash.scale.setScalar(WEAPONS[id].tier === 0 ? 0.14 : 0.22);
       weapon.classic = true;
-      const idle = id === 'ak' ? 'idle1' : 'idle_unsil';
+      const idle = WEAPONS[id].idle;
       weapon.animation = animator(model, template.animations, idle);
       weapon.idleAnimation = idle;
-      weapon.shootAnimation = id === 'ak' ? 'shoot1' : 'shoot1_unsil';
-      weapon.reloadAnimation = id === 'ak' ? 'reload' : 'reload_unsil';
+      weapon.shootAnimation = WEAPONS[id].shoot;
+      weapon.reloadAnimation = WEAPONS[id].reloadClip;
       weapon.animation.update(0);
     },
   };

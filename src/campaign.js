@@ -4,8 +4,8 @@ export const COURSES = {
     stages: [{ map: 'dust2', waves: 5 }],
   },
   'hl-campaign': {
-    name: 'BLACK MESA LOCKDOWN', description: 'Half-Life mini campaign · 3 chapters · 9 waves',
-    stages: [{ map: 'c1a0', waves: 3 }, { map: 'c1a1', waves: 3 }, { map: 'c1a2', waves: 3 }],
+    name: 'BLACK MESA LOCKDOWN', description: 'Five-map campaign · 15 waves · Pistol to heavy weapons',
+    stages: [{ map: 'c1a0', waves: 3 }, { map: 'c1a1', waves: 3 }, { map: 'c1a2', waves: 3 }, { map: 'c1a3', waves: 3 }, { map: 'c1a4', waves: 3 }],
   },
 };
 

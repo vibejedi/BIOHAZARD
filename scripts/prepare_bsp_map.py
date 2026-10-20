@@ -193,7 +193,9 @@ class BSP:
                     if not inside_polygon(x, z, vertices): continue
                     y = (distance-normal[0]*x-normal[2]*z)/normal[1]
                     key = (ix, iz, round(y, 3))
-                    if key not in samples and self.can_stand(x, y+.035, z): samples[key] = [x, round(y, 4), z]
+                    # Keep graph paths off exact clip-plane edges: small steering or
+                    # floating-point differences must not turn a valid lane into solid.
+                    if key not in samples and self.can_stand(x, y+.04, z) and all(self.can_stand(x+ox, y+.16, z+oz) for ox, oz in [(.08,0),(-.08,0),(0,.08),(0,-.08)]): samples[key] = [x, round(y, 4), z]
         nodes = list(samples.values()); columns = defaultdict(list)
         for i, p in enumerate(nodes): columns[(round(p[0]/step), round(p[2]/step))].append(i)
         links = [[] for _ in nodes]
@@ -204,7 +206,7 @@ class BSP:
                     q = nodes[j]
                     if abs(p[1]-q[1]) > .63: continue
                     height = max(p[1], q[1])+.04
-                    if all(self.can_stand(p[0]+(q[0]-p[0])*t, height, p[2]+(q[2]-p[2])*t) for t in [.25, .5, .75]): links[i].append(j)
+                    if all(self.can_stand(p[0]+(q[0]-p[0])*t, height, p[2]+(q[2]-p[2])*t) for t in [.2, .4, .6, .8]): links[i].append(j)
         # Discard isolated roofs and decorative ledges; only the main walkable component is used for spawning.
         seen, components = set(), []
         for i in range(len(nodes)):
@@ -233,7 +235,9 @@ class BSP:
         return {'step': step, 'nodes': nodes, 'links': links, 'playerSpawn': start,
                 'playerYaw': math.radians(angle)-math.pi/2,
                 'spawns': [nodes[i] for i in spawn_ids], 'polygons': self.polygons,
-                'planes': self.planes, 'clipnodes': self.clipnodes, 'headnode': self.models[0][10], 'brushes': self.brushes}
+                'planes': self.planes, 'clipnodes': self.clipnodes, 'headnode': self.models[0][10], 'brushes': self.brushes,
+                'pointNodes': [[record[0], record[1], record[2]] for record in self.records(5, 'i8h2H')],
+                'leafContents': [record[0] for record in self.records(10, 'ii6h2H4B')], 'pointHeadnode': self.models[0][9]}
 
 
 def convert_map(root, output, relative='cstrike/maps/de_dust2.bsp', map_id='dust2', name='DUST II'):

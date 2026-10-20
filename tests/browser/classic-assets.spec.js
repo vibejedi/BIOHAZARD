@@ -28,7 +28,7 @@ test('local CS models animate, share resources safely, and decoded original audi
   }, before.rotation)).toBe(true);
   await page.evaluate(() => { const g = window.__biohazard; g.kill(g.enemies[0], false); g.corpses[0].time = 8; g.updateEffects(0.1); });
   expect(await page.evaluate(() => ({ survivors: window.__biohazard.enemies.length, classicWeapon: window.__biohazard.weapons.m4.classic }))).toEqual({ survivors: 1, classicWeapon: true });
-  await expect.poll(() => page.evaluate(() => Object.keys(window.__biohazard.audio.samples).length)).toBe(10);
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__biohazard.audio.samples).length)).toBe(14);
   await page.screenshot({ path: 'test-results/classic-assets.png' });
   expect(errors).toEqual([]);
 });
@@ -42,6 +42,7 @@ test('repeated shots keep the imported M4, AK, and USP arms fully animated', asy
     const g = window.__biohazard; g.nextWaveTimer = 999; g.clearEntities();
     const results = [];
     for (const id of ['m4', 'ak', 'usp']) {
+      if (!g.ownedWeapons.includes(id)) g.ownedWeapons.push(id); g.ammunition[id].ammo = id === 'usp' ? 12 : 30;
       g.switchWeapon(id);
       const view = g.weapons[id], animation = view.animation;
       animation.update(0.2);
