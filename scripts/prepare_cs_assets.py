@@ -293,7 +293,6 @@ def prepare(root, output):
         'mp5': ('cstrike/models/v_mp5.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
         'p90': ('cstrike/models/v_p90.mdl', ['idle', 'shoot1', 'reload', 'draw']),
         'm249': ('cstrike/models/v_m249.mdl', ['idle1', 'shoot1', 'reload', 'draw']),
-        'crate': ('valve/models/mil_crate.mdl', ['idle1']),
         'player': ('cstrike/models/player/leet/leet.mdl', ['idle1', 'walk', 'run', 'death1']),
     }
     report = {'format': 1, 'models': {}, 'sounds': {}, 'maps': []}
@@ -326,7 +325,8 @@ def prepare(root, output):
             if start < 0 or length < 0 or start + length > len(data): raise ValueError(f'Invalid BSP lump: {path.name}')
         report['maps'].append({'name': path.stem, 'version': version, 'bytes': len(data), 'sha256': sha256(data).hexdigest()})
     report['source_files'] = {name: len([p for p in (root/name).rglob('*') if p.is_file()]) for name in ['cstrike', 'valve']}
-    from prepare_bsp_map import convert_map
+    from prepare_bsp_map import convert_map, convert_crate
+    report['models']['crate'] = convert_crate(root, output)
     report['world'] = convert_map(root, output)
     report['campaignWorlds'] = [convert_map(root, output, f'valve/maps/{map_id}.bsp', map_id, name) for map_id, name in [
         ('c1a0', 'ANOMALOUS MATERIALS'), ('c1a1', 'UNFORESEEN CONSEQUENCES'), ('c1a2', 'OFFICE COMPLEX'),

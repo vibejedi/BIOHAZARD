@@ -333,6 +333,9 @@ export class BiohazardGame {
   }
 
   burst(position, color, amount, blood = false) {
+    // Bone hitboxes can sit inside the animated skin. Emit toward the impact
+    // viewer so the spray clears that skin while walls still occlude it.
+    if (blood) position = position.clone().addScaledVector(this.camera.position.clone().sub(position).normalize(), 0.12);
     const positions = new Float32Array(amount * 3), velocities = [];
     for (let i = 0; i < amount; i++) { positions.set([position.x, position.y, position.z], i * 3); velocities.push(new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 3, (Math.random() - 0.5) * 3)); }
     const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));

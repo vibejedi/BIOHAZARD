@@ -5,6 +5,14 @@ services:
       dockerfile: server/Dockerfile
     environment:
       ALLOWED_ORIGINS: https://vibejedi.github.io
+      BSC_RPC_URL: ${BSC_RPC_URL:-}
+      BSC_ACCESS_TOKEN: ${BSC_ACCESS_TOKEN:-}
+      BSC_TEST_TOKEN: ${BSC_TEST_TOKEN:-0xe49b8c748660a318d7d075a7a056a620712c7777}
+      BSC_BURN_METHOD: ${BSC_BURN_METHOD:-}
+      BSC_BURN_ADDRESS: ${BSC_BURN_ADDRESS:-}
+      BSC_ALLOW_TEST_BURN: ${BSC_ALLOW_TEST_BURN:-false}
+    volumes:
+      - biohazard_accounts:/app/data
     restart: unless-stopped
     init: true
     mem_limit: 1g
@@ -23,5 +31,6 @@ services:
     depends_on:
       - game
 volumes:
+  biohazard_accounts:
   caddy_data:
   caddy_config:

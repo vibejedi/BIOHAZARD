@@ -7,9 +7,19 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 from prepare_cs_assets import anim_value, quaternion, transform, triangle_indices, web_position, web_rotation, BASIS
+from prepare_bsp_map import face_triangles
 
 
 class ImporterTests(unittest.TestCase):
+    def test_bsp_faces_light_from_the_normal_side_with_either_input_winding(self):
+        vertices = np.array([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]])
+        for points in [vertices, vertices[::-1]]:
+            for normal in [np.array([0, 0, 1]), np.array([0, 0, -1])]:
+                triangles = list(face_triangles(points, normal))
+                self.assertEqual(len(triangles), 2)
+                for a, b, c in triangles:
+                    self.assertGreater(np.dot(np.cross(points[b] - points[a], points[c] - points[a]), normal), 0)
+
     def test_animation_rle_handles_repeated_frames_and_next_run(self):
         data = struct.pack('<BBhhBBh', 2, 4, 10, 20, 1, 2, -30)
         self.assertEqual([anim_value(data, 0, i) for i in range(6)], [10, 20, 20, 20, -30, -30])

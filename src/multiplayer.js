@@ -6,7 +6,8 @@ const axis = value => Math.max(-1, Math.min(1, value));
 const time = ms => `${Math.floor(Math.max(0, ms) / 60000)}:${String(Math.floor(Math.max(0, ms) / 1000) % 60).padStart(2, '0')}`;
 
 export class MultiplayerClient {
-  constructor(game) {
+  constructor(game, wallet) {
+    this.wallet = wallet;
     this.game = game; this.socket = null; this.avatars = new Map(); this.id = null; this.matchId = null;
     this.applyingState = false; this.sequence = 0; this.inputTimer = 0; this.serverOffset = 0; this.nextStartAt = 0; this.unlockProgress = 1;
     try { $('mp-endpoint').value = localStorage.getItem('bh-match-server') || import.meta.env.VITE_MULTIPLAYER_URL || ''; $('mp-name').value = localStorage.getItem('bh-callsign') || 'Operator'; } catch { /* Optional preferences. */ }
@@ -21,6 +22,7 @@ export class MultiplayerClient {
   send(message) { if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message)); }
 
   join() {
+    if (this.wallet && !this.wallet.canPlay()) return;
     let url;
     try {
       url = new URL($('mp-endpoint').value);
@@ -28,11 +30,11 @@ export class MultiplayerClient {
       if (location.protocol === 'https:' && url.protocol !== 'wss:') throw new Error();
     } catch { $('mp-status').textContent = 'Enter the match server WebSocket address. Public HTTPS play requires wss:// and a valid TLS certificate.'; return; }
     try { localStorage.setItem('bh-match-server', url.href); localStorage.setItem('bh-callsign', $('mp-name').value); } catch { /* Optional preferences. */ }
-    if (this.socket?.readyState === WebSocket.OPEN) { this.send({ type: 'join', name: $('mp-name').value }); return; }
+    if (this.socket?.readyState === WebSocket.OPEN) { this.send({ type: 'join', name: this.wallet?.profile?.username || $('mp-name').value, authToken: this.wallet?.token }); return; }
     this.disconnect(false); $('mp-join').disabled = true; $('mp-status').textContent = 'Connecting to USA West match server…';
     const socket = new WebSocket(url.href); this.socket = socket;
     const timeout = setTimeout(() => { if (socket.readyState !== WebSocket.OPEN) { socket.close(); $('mp-status').textContent = 'Server connection timed out. Check that the VPS is running and the address is correct.'; } }, 8000);
-    socket.addEventListener('open', () => { clearTimeout(timeout); this.send({ type: 'join', name: $('mp-name').value }); });
+    socket.addEventListener('open', () => { clearTimeout(timeout); this.send({ type: 'join', name: this.wallet?.profile?.username || $('mp-name').value, authToken: this.wallet?.token }); });
     socket.addEventListener('message', event => {
       try { this.receive(JSON.parse(event.data)); } catch (error) { console.warn('Match message could not be applied:', error.message); }
     });

@@ -65,7 +65,14 @@ export async function loadClassicAssets() {
     manifest,
     createCrate() {
       const model = clone(templates.crate.scene), group = new THREE.Group();
-      const animation = animator(model, templates.crate.animations, 'idle1'); animation.update(0); model.updateMatrixWorld(true);
+      // The original intact brush crate is static, with all six textured faces.
+      // Keep the interactable readable in rooms without baked ambient light.
+      model.traverse(object => {
+        if (!object.isMesh) return;
+        object.material = object.material.clone();
+        object.material.emissive.setScalar(0.04); object.material.emissiveMap = object.material.map;
+      });
+      model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
       const scale = 1.15 / Math.max(size.x, size.z);
       model.scale.setScalar(scale); model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);

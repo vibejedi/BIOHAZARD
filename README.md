@@ -1,6 +1,6 @@
 # BIOHAZARD / Quarantine Protocol
 
-A browser horror survival game using original Counter-Strike and Half-Life maps, CS weapons, and animated Half-Life monsters. Choose **Black Mesa Lockdown** or Dust II training, the main five-map wave campaign. The procedural Ashen map has been removed.
+A browser horror survival game using original Counter-Strike and Half-Life maps, CS weapons, and animated Half-Life monsters. The main mode is **Black Mesa Lockdown**, a five-map wave campaign, with Dust II training as an alternative. The procedural Ashen map has been removed.
 
 The standalone edition is **one HTML file** containing the game, map, models, textures, sound, and fonts. It needs no installation, asset server, account, or internet connection. This is custom wave-survival and PvP gameplay in Three.js; it does not run the native Counter-Strike client/server libraries or original CS multiplayer rules.
 
@@ -19,9 +19,27 @@ For the downloadable edition:
 
 The hosted build and standalone edition include all six playable maps. It includes the prepared media from the user's supplied game package. No Windows executable is needed to play. The standalone file also works when served from an ordinary static web host.
 
+## Develop from mobile or anywhere
+
+[Open in GitHub Codespaces](https://codespaces.new/vibejedi/BIOHAZARD?ref=main).
+Setup restores the published browser media, installs locked dependencies, checks
+and builds the game, then starts the game and development match/account servers.
+Open forwarded port **5173** to preview, edit in the browser, and commit/push to
+save changes. Resume the same Codespace from your phone or another computer.
+Ports stay private by default. See [the mobile development guide](.devcontainer/README.md).
+
+## Wallets and crypto rewards
+
+The game now includes BSC wallet connection, signed username registration, and a
+server-verified permanent 100,000-token burn-pass flow. The project token is not
+launched. The owner's temporary mainnet test-token address is separate, with burns
+disabled by default. Practice play remains available until production access is
+configured. Live achievement crates, prize assets, odds and funding are awaiting
+the owner's rules; no crypto payouts are enabled. See [wallet/rewards setup](docs/WALLETS_AND_REWARDS.md).
+
 ## Develop and build
 
-Use Node.js 22.12+ or 24 LTS. From this checkout:
+Use Node.js 24 LTS for the complete development environment, including wallet accounts. From this checkout:
 
 ```sh
 npm ci --cache /tmp/biohazard-npm-cache
@@ -70,7 +88,7 @@ zombies take 3–4 body hits or one headshot. Animated bone hitboxes, muzzle fla
 and blood effects work with all seven guns.
 
 Body kills earn $100, headshot kills $150, and each wave $300. Open the original
-Half-Life military crate with E to buy a weapon, refill the held gun, or restore
+Dust II military crate with E to buy a weapon, refill the held gun, or restore
 health. **No free ammunition or health between waves or chapters.** SMGs unlock
 at wave 4, rifles at wave 7 and heavy weapons at wave 13. Cash and points have no
 real-world value. See [prices and scoring](docs/COMPETITION.md).

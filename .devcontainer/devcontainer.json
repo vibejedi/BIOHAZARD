@@ -1,0 +1,45 @@
+{
+  "name": "BIOHAZARD browser development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "node",
+  "updateRemoteUserUID": true,
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb",
+    "storage": "16gb"
+  },
+  "forwardPorts": [
+    5173,
+    8080
+  ],
+  "portsAttributes": {
+    "5173": {
+      "label": "BIOHAZARD game preview",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "BIOHAZARD development multiplayer",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "node .devcontainer/dev.mjs start",
+  "postAttachCommand": "node .devcontainer/dev.mjs status",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        ".devcontainer/README.md",
+        "src/game.js"
+      ]
+    },
+    "vscode": {
+      "settings": {
+        "editor.tabSize": 2,
+        "files.eol": "\n"
+      }
+    }
+  }
+}

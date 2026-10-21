@@ -16,6 +16,13 @@ from prepare_cs_assets import GLB, web_position
 INVISIBLE = {'sky', 'clip', 'origin', 'aaatrigger', 'null', 'hint', 'skip', 'bevel', 'contentwater'}
 
 
+def face_triangles(vertices, normal):
+    """Match glTF front faces to BSP normals so dynamic light reaches the room."""
+    for i in range(1, len(vertices) - 1):
+        forward = np.dot(np.cross(vertices[i] - vertices[0], vertices[i+1] - vertices[0]), normal) > 0
+        yield (0, i, i+1) if forward else (0, i+1, i)
+
+
 def inside_polygon(x, z, vertices):
     signs = []
     for a, b in zip(vertices, vertices[1:] + vertices[:1]):
@@ -164,8 +171,8 @@ class BSP:
                 if normal[2] > 0.55 and model_index in self.solid_models:
                     self.polygons.append({'vertices': converted, 'normal': web_normal.tolist(), 'distance': float(np.dot(web_normal, converted[0]))})
                 bucket = geometry[texture_index]
-                for i in range(1, len(vertices)-1):
-                    for v in [0, i, i+1]:
+                for triangle in face_triangles(vertices, normal):
+                    for v in triangle:
                         bucket['positions'].append(converted[v]); bucket['normals'].append(web_normal)
                         bucket['uv'].append(st[v]/[texture['w'], texture['h']]); bucket['uv1'].append(lm[v])
                 face_count += 1
@@ -180,6 +187,34 @@ class BSP:
         Image.fromarray(atlas).save(output/f'{map_id}-lightmap.png')
         print(f'{map_id}:', face_count, 'faces,',len(primitives),'texture batches,',len(self.polygons),'walkable polygons', flush=True)
         return {'faces': face_count, 'materials': len(primitives), 'geometry': f'{map_id}.glb', 'lightmap': f'{map_id}-lightmap.png'}
+
+    def export_prop(self, output, model_index):
+        """Copy an original brush model with its exact faces and texture UVs."""
+        model = self.models[model_index]
+        center = web_position((np.array(model[:3]) + np.array(model[3:6])) / 2)
+        glb = GLB(); glb.doc['nodes'] = [{'name': f'{self.path.stem}_model_{model_index}', 'mesh': 0}]
+        del glb.doc['skins']; del glb.doc['animations']
+        geometry, materials = {}, {}
+        for index in range(model[14], model[14] + model[15]):
+            plane, side, first, count, info_id, *_ = self.faces[index]
+            info = self.texinfo[info_id]; texture_index = info[8]; texture = self.textures[texture_index]
+            if texture_index not in materials: materials[texture_index] = glb.material(texture['name'], texture['pixels'])
+            bucket = geometry.setdefault(texture_index, {'positions': [], 'normals': [], 'uv': []})
+            vertices = []
+            for edge in self.surfedges[first:first+count]: vertices.append(self.vertices[self.edges[abs(edge)][0 if edge >= 0 else 1]])
+            normal = np.array(self.planes[plane][:3]) * (-1 if side else 1)
+            vertices = np.array(vertices)
+            for triangle in face_triangles(vertices, normal):
+                for vertex in vertices[list(triangle)]:
+                    bucket['positions'].append(web_position(vertex) - center); bucket['normals'].append(web_position(normal) * 32)
+                    bucket['uv'].append([(np.dot(vertex, info[:3])+info[3])/texture['w'], (np.dot(vertex, info[4:7])+info[7])/texture['h']])
+        primitives = []
+        for texture, values in geometry.items():
+            attributes = {name: glb.accessor(values[key], kind) for name, key, kind in [('POSITION', 'positions', 'VEC3'), ('NORMAL', 'normals', 'VEC3'), ('TEXCOORD_0', 'uv', 'VEC2')]}
+            for accessor in attributes.values(): glb.doc['bufferViews'][glb.doc['accessors'][accessor]['bufferView']]['target'] = 34962
+            primitives.append({'attributes': attributes, 'material': materials[texture]})
+        glb.doc['meshes'] = [{'primitives': primitives}]; glb.save(output)
+        return {'file': output.name, 'source': f'{self.path.name}#model{model_index}', 'bones': 0, 'materials': len(materials), 'primitives': len(primitives), 'faces': model[15], 'animations': [], 'hitboxes': [], 'attachments': [], 'bytes': output.stat().st_size}
 
     def navigation(self, step=.5):
         samples = {}
@@ -238,6 +273,21 @@ class BSP:
                 'planes': self.planes, 'clipnodes': self.clipnodes, 'headnode': self.models[0][10], 'brushes': self.brushes,
                 'pointNodes': [[record[0], record[1], record[2]] for record in self.records(5, 'i8h2H')],
                 'leafContents': [record[0] for record in self.records(10, 'ii6h2H4B')], 'pointHeadnode': self.models[0][9]}
+
+
+def convert_crate(root, output):
+    bsp = BSP(root/'cstrike/maps/de_dust2.bsp', root)
+    for entity in bsp.entities:
+        if entity.get('classname') != 'func_breakable' or not entity.get('model', '').startswith('*'): continue
+        index = int(entity['model'][1:]); model = bsp.models[index]
+        if model[15] != 6 or not np.allclose(np.array(model[3:6])-model[:3], [64, 64, 64]): continue
+        textures = [bsp.textures[bsp.texinfo[bsp.faces[face][4]][8]]['name'] for face in range(model[14], model[14]+model[15])]
+        if not all(name.lower().startswith('mltrycrte') for name in textures): continue
+        result = bsp.export_prop(output/'crate.glb', index)
+        result['sha256'] = __import__('hashlib').sha256(bsp.data).hexdigest()
+        print('Original Dust II supply crate:', result['source'], result['bytes'], 'bytes', flush=True)
+        return result
+    raise ValueError('An intact original Dust II military crate was not found')
 
 
 def convert_map(root, output, relative='cstrike/maps/de_dust2.bsp', map_id='dust2', name='DUST II'):

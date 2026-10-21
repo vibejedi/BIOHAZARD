@@ -10,6 +10,7 @@ import './style.css';
 import { BiohazardGame } from './game.js';
 import { COURSES } from './campaign.js';
 import { MultiplayerClient } from './multiplayer.js';
+import { WalletUI } from './wallet.js';
 
 const icons = {
   arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
@@ -103,10 +104,11 @@ try {
 }
 
 if (game) {
-  const multiplayer = new MultiplayerClient(game);
+  const wallet = new WalletUI(game);
+  const multiplayer = new MultiplayerClient(game, wallet);
   const read = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
   const save = (key, value) => { try { localStorage.setItem(key, value); } catch { /* Storage can be disabled. */ } };
-  const deploy = () => { if (game.networkSession) { game.home(); document.querySelector('#multiplayer-dialog').showModal(); return; } game.start('usp', document.querySelector('#difficulty').value); };
+  const deploy = () => { if (!wallet.canPlay()) return; if (game.networkSession) { game.home(); document.querySelector('#multiplayer-dialog').showModal(); return; } game.start('usp', document.querySelector('#difficulty').value); };
   document.querySelector('#deploy').addEventListener('click', deploy);
   document.querySelector('#retry').addEventListener('click', deploy);
   document.querySelector('#restart').addEventListener('click', deploy);
