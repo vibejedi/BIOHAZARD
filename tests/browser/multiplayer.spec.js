@@ -21,7 +21,11 @@ test('two browsers queue into an actual PvP room, render original players, shoot
       page.on('console', message => { if (message.text().includes('could not be applied')) errors.push(message.text()); });
       await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
       await page.goto('/?test=1'); await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
-      await page.locator('#mode-multiplayer').click(); await page.locator('#mp-name').fill(`Browser ${i}`);
+      await expect(page.locator('#mode-multiplayer')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('#map-select')).toBeHidden();
+      await expect(page.locator('#deploy')).toHaveText('JOIN DEATHMATCH');
+      expect(await page.evaluate(() => window.__biohazard.world.id)).toBe('dust2');
+      await page.locator('#deploy').click(); await page.locator('#mp-name').fill(`Browser ${i}`);
       await page.locator('#mp-endpoint').fill(endpoint); await page.locator('#mp-join').click();
     }
     await expect(pages[0].locator('#mp-queue-count')).toContainText('2 QUEUED');

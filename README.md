@@ -1,8 +1,8 @@
 # BIOHAZARD / Quarantine Protocol
 
-A browser horror survival game using original Counter-Strike and Half-Life maps, CS weapons, and animated Half-Life monsters. The main mode is **Black Mesa Lockdown**, a five-map wave campaign, with Dust II training as an alternative. The procedural Ashen map has been removed.
+A browser horror survival game using original Counter-Strike and Half-Life maps, CS weapons, and animated Half-Life monsters. The main mode is **USA West PvP deathmatch** on Dust II: up to ten players, five-minute matches, and queues every five minutes. **Black Mesa Lockdown**, the five-map wave campaign, is secondary, with Dust II survival training also available. The procedural Ashen map has been removed.
 
-The standalone edition is **one HTML file** containing the game, map, models, textures, sound, and fonts. It needs no installation, asset server, account, or internet connection. This is custom wave-survival and PvP gameplay in Three.js; it does not run the native Counter-Strike client/server libraries or original CS multiplayer rules.
+The standalone edition is **one HTML file** containing the game, map, models, textures, sound, and fonts. Choose Campaign for offline play without an installation, asset server or account; PvP requires an Internet connection to the match server. This is custom wave-survival and PvP gameplay in Three.js; it does not run the native Counter-Strike client/server libraries or original CS multiplayer rules.
 
 ## Play the browser edition
 
@@ -96,7 +96,7 @@ real-world value. See [prices and scoring](docs/COMPETITION.md).
 ## Operations and horror mode
 
 - **Dust II:** original CS map, five waves, 50 enemies.
-- **Black Mesa Lockdown (main mode):** original Half-Life `c1a0` → `c1a1` → `c1a2` → `c1a3` → `c1a4`: Anomalous Materials, Unforeseen Consequences, Office Complex, We've Got Hostiles and Blast Pit. Three waves per chapter, fifteen waves and 300 enemies. All inventory, health, cash and score carry between maps.
+- **Black Mesa Lockdown (secondary mode):** original Half-Life `c1a0` → `c1a1` → `c1a2` → `c1a3` → `c1a4`: Anomalous Materials, Unforeseen Consequences, Office Complex, We've Got Hostiles and Blast Pit. Three waves per chapter, fifteen waves and 300 enemies. All inventory, health, cash and score carry between maps.
 
 All maps use darker baked lighting, cool ambient light, fog, and a camera-mounted spotlight. Press **F**, or tap the flashlight button in the HUD, to toggle it. The flashlight starts on and has no battery limit. Map materials respond to the light; it is not a screen brightness overlay. Muzzle flashes follow the model's actual barrel attachment and remain visible through a 50 ms frame. Blood sprays are visible at normal shooting distances.
 
@@ -115,12 +115,12 @@ The second mode is **PvP free-for-all**. A separate Node/WebSocket service batch
 queues every five minutes into independent rooms of 2–10 players. Matches last
 five minutes and run on Dust II with original animated player models. The server
 verifies movement/collision, hits, ammo, cash, purchases and respawns. Results rank
-frags, fewer deaths, then headshots. No account or persistent rankings yet.
+frags, fewer deaths, then headshots. Guest play is available before launch; wallet accounts and permanent access-pass verification are implemented. Persistent global rankings are not yet available.
 
 The server and browser connection flow are implemented and locally tested. Public
 multiplayer requires a USA West VPS, domain and TLS; GitHub Pages cannot run the
 match service. The multiplayer menu accepts its `wss://…/ws` address and shows
-actual connection/queue status. See [VPS deployment](docs/MULTIPLAYER.md).
+actual connection/queue status. See [the Contabo deployment guide](docs/VPS_DEPLOYMENT.md) and [multiplayer rules](docs/MULTIPLAYER.md).
 
 ```sh
 npm run server:prepare

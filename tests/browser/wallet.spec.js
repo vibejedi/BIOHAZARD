@@ -57,7 +57,7 @@ test('BSC wallet sign-in requires a username, does not send funds, and a separat
   expect(decoded.args[0]).toBe(100000n * 10n ** 18n);
   await expect(page.locator('#wallet-access-status')).toContainText('Selling or moving remaining tokens does not revoke');
   await page.screenshot({ path: 'test-results/wallet-permanent-pass.png' });
-  await page.getByRole('button', { name: 'Close wallet', exact: true }).click(); await page.locator('#deploy').click();
+  await page.getByRole('button', { name: 'Close wallet', exact: true }).click(); await page.locator('#mode-campaign').click(); await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();
   await page.evaluate(() => window.walletTestEvents.accountsChanged([]));
   await expect(page.locator('#menu')).toBeVisible();

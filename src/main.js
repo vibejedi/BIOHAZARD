@@ -42,17 +42,17 @@ document.querySelector('#app').innerHTML = `
 
   <main id="menu" class="menu">
     <div class="eyebrow"><span class="little-line"></span> THE LAST LINE OF DEFENSE</div>
-    <h1>BLACK MESA.<br>LAST <span>STAND.</span></h1>
-    <p class="intro">Five maps. Fifteen waves. One pistol.<br>Earn your arsenal. Spend wisely. Survive the lockdown.</p>
-    <div class="mode-tabs" role="group" aria-label="Game mode"><button id="mode-campaign" class="selected">01 CAMPAIGN</button><button id="mode-multiplayer" disabled>02 MULTIPLAYER</button></div><div class="mission-card">
-      <div class="mission-top"><span class="tag">SPEED SURVIVAL</span><select id="map-select" aria-label="Map" disabled><option value="hl-campaign">BLACK MESA · CAMPAIGN</option><option value="dust2" disabled>DUST II · TRAINING</option></select></div>
+    <h1>NO TEAMS.<br>LAST <span>STANDING.</span></h1>
+    <p class="intro">Ten players. Five minutes. Every kill counts.<br>Queue for USA West deathmatch. Earn your arsenal.</p>
+    <div class="mode-tabs" role="group" aria-label="Game mode"><button id="mode-multiplayer" class="selected" aria-pressed="true" disabled>01 PVP DEATHMATCH</button><button id="mode-campaign" aria-pressed="false" disabled>02 CAMPAIGN</button></div><div class="mission-card">
+      <div class="mission-top"><span class="tag">SPEED SURVIVAL</span><select id="map-select" aria-label="Map" disabled><option value="hl-campaign">BLACK MESA · CAMPAIGN</option><option value="dust2" disabled>DUST II · TRAINING</option></select><span id="pvp-map-label">DUST II · DEATHMATCH</span></div>
       <div class="mission-title"><span class="map-icon">${icon('pin')}</span><div><h2>BLACK MESA LOCKDOWN</h2><p>Five maps · Fifteen waves · Earn your arsenal</p></div><span class="danger-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
       <div class="mission-meta"><span>${icon('skull')} 5 HOSTILE WAVES</span><span>${icon('shield')} SOLO OPERATION</span></div>
     </div>
     <div class="loadout-label"><span>WEAPON PROGRESSION</span><span>$600 STARTING CASH</span></div>
     <div class="progression-strip"><span class="active">USP / PISTOLS<small>START</small></span><i>→</i><span>SMGs<small>CHAPTER 2</small></span><i>→</i><span>RIFLES<small>CHAPTER 3</small></span><i>→</i><span>HEAVY<small>CHAPTER 5</small></span></div>
     <div class="difficulty-row"><label for="difficulty">THREAT LEVEL</label><div class="difficulty-select"><span class="status-dot"></span><select id="difficulty" aria-label="Threat level"><option value="recruit">RECRUIT</option><option value="operator" selected>OPERATOR</option><option value="veteran">VETERAN</option></select></div></div>
-    <button class="deploy" id="deploy"><span>ENTER THE QUARANTINE</span>${icon('arrow')}</button>
+    <button class="deploy" id="deploy"><span>JOIN DEATHMATCH</span>${icon('arrow')}</button>
     <div class="deploy-note" id="asset-status"><span class="status-dot"></span> LOADING COUNTER-STRIKE MAP + MODELS…</div>
     <button class="records-link" id="records-open">PERSONAL CAMPAIGN SCORES ${icon('arrow')}</button>
   </main>
@@ -87,6 +87,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 let game;
+let refreshMenu = () => {};
 try {
   game = new BiohazardGame(document.querySelector('#world'), {
     icon,
@@ -95,6 +96,7 @@ try {
       document.querySelector('#hud').hidden = !['playing', 'paused'].includes(state);
       document.querySelector('#pause-screen').hidden = state !== 'paused';
       document.querySelector('#result-screen').hidden = !['dead', 'won'].includes(state);
+      if (state === 'home') refreshMenu();
     },
   });
 } catch (error) {
@@ -108,7 +110,33 @@ if (game) {
   const multiplayer = new MultiplayerClient(game, wallet);
   const read = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } };
   const save = (key, value) => { try { localStorage.setItem(key, value); } catch { /* Storage can be disabled. */ } };
-  const deploy = () => { if (!wallet.canPlay()) return; if (game.networkSession) { game.home(); document.querySelector('#multiplayer-dialog').showModal(); return; } game.start('usp', document.querySelector('#difficulty').value); };
+  let menuMode = 'pvp';
+  const setMenuMode = mode => {
+    menuMode = mode;
+    const pvp = mode === 'pvp';
+    if (game.state !== 'home') game.home();
+    if (!pvp && multiplayer.socket) multiplayer.disconnect();
+    game.selectCourse(pvp ? 'dust2' : 'hl-campaign');
+    for (const [id, selected] of [['mode-multiplayer', pvp], ['mode-campaign', !pvp]]) {
+      const button = document.getElementById(id); button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
+    }
+    document.querySelector('#menu h1').innerHTML = pvp ? 'NO TEAMS.<br>LAST <span>STANDING.</span>' : 'BLACK MESA.<br>LAST <span>STAND.</span>';
+    document.querySelector('.intro').innerHTML = pvp ? 'Ten players. Five minutes. Every kill counts.<br>Queue for USA West deathmatch. Earn your arsenal.' : 'Five maps. Fifteen waves. One pistol.<br>Earn your arsenal. Spend wisely. Survive the lockdown.';
+    document.querySelector('.mission-top .tag').textContent = pvp ? 'USA WEST · FREE FOR ALL' : 'SPEED SURVIVAL';
+    document.querySelector('#map-select').hidden = pvp; document.querySelector('#pvp-map-label').hidden = !pvp;
+    document.querySelector('.difficulty-row').hidden = pvp; document.querySelector('#records-open').hidden = pvp;
+    document.querySelector('#deploy span').textContent = pvp ? 'JOIN DEATHMATCH' : 'ENTER THE QUARANTINE';
+    const labels = document.querySelectorAll('.progression-strip small');
+    ['START', ...(pvp ? ['1 MINUTE', '2 MINUTES', '4 MINUTES'] : ['CHAPTER 2', 'CHAPTER 3', 'CHAPTER 5'])].forEach((label, i) => { labels[i].textContent = label; });
+    if (pvp) {
+      document.querySelector('.mission-title h2').textContent = 'DUST II DEATHMATCH';
+      document.querySelector('.mission-title p').textContent = '2–10 players · Five-minute matches · Queue every five minutes';
+      document.querySelector('.mission-meta').innerHTML = `<span>${icon('target')} PVP DEATHMATCH</span><span>${icon('shield')} UP TO 10 PLAYERS</span>`;
+    } else document.querySelector('.mission-meta').innerHTML = `<span>${icon('skull')} 15 HOSTILE WAVES</span><span>${icon('shield')} SOLO OPERATION</span>`;
+  };
+  refreshMenu = () => setMenuMode(menuMode);
+  const openMultiplayer = () => { setMenuMode('pvp'); document.querySelector('#multiplayer-dialog').showModal(); };
+  const deploy = () => { if (!wallet.canPlay()) return; if (menuMode === 'pvp' || game.networkSession) { openMultiplayer(); return; } game.start('usp', document.querySelector('#difficulty').value); };
   document.querySelector('#deploy').addEventListener('click', deploy);
   document.querySelector('#retry').addEventListener('click', deploy);
   document.querySelector('#restart').addEventListener('click', deploy);
@@ -137,13 +165,14 @@ if (game) {
   const updateQuality = () => { game.setQuality(quality.value); save('bh-quality', quality.value); };
   quality.addEventListener('change', updateQuality); updateQuality();
   document.querySelector('#map-select').addEventListener('change', event => game.selectCourse(event.target.value));
-  document.querySelector('#mode-campaign').addEventListener('click', () => { game.home(); game.selectCourse('hl-campaign'); });
+  document.querySelector('#mode-campaign').addEventListener('click', () => setMenuMode('campaign'));
+  document.querySelector('#mode-multiplayer').addEventListener('click', openMultiplayer);
   document.querySelector('#armory-weapons').addEventListener('click', event => { const button = event.target.closest('[data-buy]'); if (button) game.buy(button.dataset.buy, button.dataset.id); });
   document.querySelector('#buy-ammo').addEventListener('click', () => game.buy('ammo'));
   document.querySelector('#buy-health').addEventListener('click', () => game.buy('medkit'));
   document.querySelector('#armory-dialog').addEventListener('close', () => { game.shopping = false; game.keys.clear(); if (game.state === 'playing') game.requestPointer(); });
   const assetStatus = document.querySelector('#asset-status'), deployButton = document.querySelector('#deploy');
-  deployButton.disabled = true; game.assetsStatus = 'loading';
+  deployButton.disabled = true; game.assetsStatus = 'loading'; setMenuMode('pvp');
   game.loadClassicAssets().then(assets => {
     game.assetsStatus = assets && game.world.id ? 'ready' : 'absent';
     if (assets && game.world.id) {
@@ -151,6 +180,7 @@ if (game) {
       for (const option of document.querySelectorAll('#map-select option')) option.disabled = !COURSES[option.value].stages.every(stage => game.worlds[stage.map]);
       document.querySelector('#map-select').value = game.courseId;
       document.querySelector('#map-select').disabled = false;
+      setMenuMode(menuMode);
       document.querySelector('#manual-dialog .manual-tip').textContent = 'Start with a USP and $600. E opens the original military supply crate: buy weapons, refill the held gun, or buy health. No automatic ammo or health refill between waves. The 5-map campaign unlocks SMGs at wave 4, rifles at wave 7, and heavy weapons at wave 13. Every completed wave scores headshots, speed, damage taken, and accuracy. F toggles the flashlight.';
       document.querySelector('#manual-dialog .small-print').textContent = 'On touchscreens: use the left stick to move, drag the right side to look, and use the action buttons. This browser survival game uses original Counter-Strike and Half-Life maps, CS weapons, and Half-Life zombies. Black Mesa Lockdown is a custom wave campaign; original Half-Life story scripts, puzzles, and moving machinery are not included. Original Counter-Strike multiplayer and native game code are not included.';
     } else { assetStatus.textContent = 'COUNTER-STRIKE ASSETS MISSING · GAME UNAVAILABLE'; }
@@ -159,7 +189,7 @@ if (game) {
     assetStatus.textContent = 'COUNTER-STRIKE ASSETS COULD NOT LOAD · RELOAD TO RETRY';
     assetStatus.title = error.message;
     console.warn('Classic asset loading failed:', error);
-  }).finally(() => { deployButton.disabled = game.assetsStatus !== 'ready'; document.querySelector('#mode-multiplayer').disabled = deployButton.disabled; });
+  }).finally(() => { deployButton.disabled = game.assetsStatus !== 'ready'; document.querySelector('#mode-multiplayer').disabled = deployButton.disabled; document.querySelector('#mode-campaign').disabled = deployButton.disabled; });
   // Opt-in deterministic controls for browser integration tests; absent in normal play.
   if (new URLSearchParams(location.search).has('test')) window.__biohazard = game;
 }

@@ -11,7 +11,6 @@ export class MultiplayerClient {
     this.game = game; this.socket = null; this.avatars = new Map(); this.id = null; this.matchId = null;
     this.applyingState = false; this.sequence = 0; this.inputTimer = 0; this.serverOffset = 0; this.nextStartAt = 0; this.unlockProgress = 1;
     try { $('mp-endpoint').value = localStorage.getItem('bh-match-server') || import.meta.env.VITE_MULTIPLAYER_URL || ''; $('mp-name').value = localStorage.getItem('bh-callsign') || 'Operator'; } catch { /* Optional preferences. */ }
-    $('mode-multiplayer').addEventListener('click', () => { if (game.state !== 'home') game.home(); $('multiplayer-dialog').showModal(); });
     $('mp-join').addEventListener('click', () => this.join());
     $('mp-leave').addEventListener('click', () => { this.send({ type: 'leave' }); this.disconnect(); });
     this.displayTimer = setInterval(() => {

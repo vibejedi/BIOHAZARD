@@ -32,6 +32,7 @@ test('the hosted production folder runs under a subdirectory on a plain static s
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto(address.replace('/BIOHAZARD.html', '/hosted/index.html?test=1'));
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   expect(await page.evaluate(() => ({ map: window.__biohazard.world.id, embedded: Boolean(globalThis.__BIOHAZARD_MEDIA__) }))).toEqual({ map: 'c1a0', embedded: false });
   await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();
@@ -48,6 +49,7 @@ test('standalone Dust2 game loads with no asset server and supports movement, co
   await page.addInitScript(() => { try { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); } catch { /* Storage can be unavailable. */ } });
   await page.goto(`${address}?test=1`);
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   expect(await page.evaluate(() => window.__biohazard.world.id)).toBe('c1a0');
   await page.locator('#map-select').selectOption('dust2');
   expect(network).toEqual([`${address}?test=1`]);
@@ -91,6 +93,7 @@ test('the single HTML also initializes and plays with an opaque origin and netwo
   page.on('request', req => { if (req.url().startsWith('http')) requests.push(req.url()); });
   await page.setContent(html.toString(), { waitUntil: 'load', timeout: 60000 });
   await expect(page.locator('#asset-status')).toContainText('HALF-LIFE ZOMBIES', { timeout: 30000 });
+  await page.locator('#mode-campaign').click();
   await expect(page.locator('#map-select')).toHaveValue('hl-campaign');
   await page.locator('#deploy').click();
   await expect(page.locator('#hud')).toBeVisible();

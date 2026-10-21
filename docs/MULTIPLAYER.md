@@ -1,6 +1,6 @@
 # USA West free-for-all server
 
-The second mode is PvP deathmatch. Queue batches start at five-minute Unix-time
+The main mode is PvP deathmatch; the five-map solo campaign is secondary. Queue batches start at five-minute Unix-time
 boundaries. Each instance has 2–10 players and lasts five minutes. More than ten
 queued players are split into separate rooms; a lone remainder waits for the
 next batch. Current instances accept no late joins. Up to eight rooms can run
@@ -43,16 +43,17 @@ starting point; measure real tick time and bandwidth before increasing capacity.
 ```sh
 git clone https://github.com/vibejedi/BIOHAZARD.git
 cd BIOHAZARD
-npm ci --cache /tmp/biohazard-npm-cache
-npm run server:prepare
+# Docker Engine with the Compose plugin must already be installed.
 cp deploy/.env.example deploy/.env
 # Edit GAME_HOST in deploy/.env to your actual hostname.
-docker compose --env-file deploy/.env -f deploy/compose.yml up -d --build
+bash deploy/start.sh
 ```
 
-`server:prepare` copies current prepared Dust2 collision data. On a fresh clone,
-it fetches that curated file from `gh-pages`; original game files are not needed
-on the VPS. The container excludes the installer, raw assets, and browser media.
+`deploy/start.sh` fetches the curated Dust II collision data from `gh-pages`,
+builds the container, validates that data and waits for server readiness. Git and
+Docker/Compose are the only host prerequisites; host Node/npm and the original
+game files are not needed on the VPS. For manual Node development,
+`npm run server:prepare` remains available. The container excludes the installer, raw assets, and browser media.
 Caddy terminates TLS and proxies WebSockets to the private game container.
 
 Verify `https://YOUR_HOST/healthz` returns `status: ok`. In the game's Multiplayer
@@ -64,6 +65,9 @@ with `VITE_MULTIPLAYER_URL`.
 deployment defaults to `https://vibejedi.github.io`. Set `HOST`, `PORT`, or
 `BIOHAZARD_MAP_DATA` for a non-container setup. Keep host secrets out of Git and
 the browser build. No player payment credentials are used by this release.
+
+For Contabo setup, DNS, firewall checks, updates and account backups, follow
+[the VPS deployment guide](VPS_DEPLOYMENT.md).
 
 ## Validation and current limits
 
@@ -78,9 +82,11 @@ from the already populated npm cache. The normal VPS Dockerfile uses npm ci
 against the registry; Compose configuration was validated. Public DNS/TLS and
 VPS latency still require deployment verification.
 
-This is the first guest-player multiplayer implementation. Accounts, reconnect
-identity, persistent global rankings, server-side replay review, regional
-redundancy, and latency compensation are not implemented. The authoritative
+Guest play is available before the project-token launch. Wallet accounts and
+permanent burn-pass verification are implemented; see
+[wallet setup](WALLETS_AND_REWARDS.md). Reconnect identity, persistent global
+rankings, server-side replay review, regional redundancy, and latency compensation
+are not implemented. The authoritative
 server is a foundation for fair PvP; it is not a complete anti-cheat system.
 There are no entry fees or payouts. Actual public service readiness must be
 verified after the VPS and DNS are configured; a locally passing service does

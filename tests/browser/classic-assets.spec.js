@@ -10,6 +10,7 @@ test('local CS models animate, share resources safely, and decoded original audi
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   await expect(page.locator('#asset-status')).toContainText('HALF-LIFE ZOMBIES');
   await page.locator('#deploy').click();
   const before = await page.evaluate(() => {
@@ -37,6 +38,7 @@ test('repeated shots keep the imported M4, AK, and USP arms fully animated', asy
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   await page.locator('#deploy').click();
   const results = await page.evaluate(() => {
     const g = window.__biohazard; g.nextWaveTimer = 999; g.clearEntities();

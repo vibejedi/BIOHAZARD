@@ -5,6 +5,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   await page.locator('#map-select').selectOption('dust2');
   await page.locator('#deploy').click();
 });

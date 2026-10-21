@@ -4,6 +4,7 @@ test('the original crate sells progressively unlocked weapons and refills only t
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto('/?test=1'); await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').click();
   await expect(page.locator('#map-select')).toHaveValue('hl-campaign');
   await page.locator('#deploy').click();
   expect(await page.evaluate(() => {

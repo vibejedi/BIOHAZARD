@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { placeTarget } from './scenario.js';
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page }, testInfo) => {
+  // The mobile scenario creates its own touch context. Avoid a second active
+  // WebGL game consuming software-renderer time throughout that scenario.
+  if (testInfo.title === 'mobile layout and touch actions remain usable') return;
   await page.addInitScript(() => { localStorage.setItem('bh-quality', 'low'); localStorage.setItem('bh-sound', 'false'); });
   await page.goto('/?test=1');
   await page.waitForFunction(() => window.__biohazard?.state === 'home');
   await page.waitForFunction(() => window.__biohazard?.assetsStatus !== 'loading');
   await page.evaluate(() => document.fonts.ready);
+  if (await page.locator('#mode-campaign').isEnabled()) await page.locator('#mode-campaign').click();
 });
 
 test('loadout, manual, settings, and desktop layout work', async ({ page }) => {
@@ -86,6 +90,7 @@ test('mobile layout and touch actions remain usable', async ({ browser }) => {
   const page = await context.newPage();
   await page.addInitScript(() => localStorage.setItem('bh-quality', 'low'));
   await page.goto('/?test=1'); await page.waitForFunction(() => window.__biohazard?.assetsStatus === 'ready');
+  await page.locator('#mode-campaign').tap();
   await expect(page.locator('#deploy')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   await page.locator('#deploy').tap();

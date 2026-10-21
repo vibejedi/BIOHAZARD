@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: server/Dockerfile
     environment:
-      ALLOWED_ORIGINS: https://vibejedi.github.io
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://vibejedi.github.io}
       BSC_RPC_URL: ${BSC_RPC_URL:-}
       BSC_ACCESS_TOKEN: ${BSC_ACCESS_TOKEN:-}
       BSC_TEST_TOKEN: ${BSC_TEST_TOKEN:-0xe49b8c748660a318d7d075a7a056a620712c7777}
